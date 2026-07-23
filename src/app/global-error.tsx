@@ -1,0 +1,4 @@
+"use client";
+import * as Sentry from "@sentry/nextjs";
+import { useEffect } from "react";
+export default function GlobalError({error,reset}:{error:Error&{digest?:string};reset:()=>void}){useEffect(()=>{Sentry.captureException(error)},[error]);return <html><body><main className="grid min-h-screen place-items-center bg-[#f8f5ef] p-6"><div className="max-w-md text-center"><p className="eyebrow text-[#681f2c]">A thread came loose</p><h1 className="mt-3 font-display text-4xl">Something went wrong.</h1><p className="mt-3 text-sm text-[#716761]">The error has been recorded. Your payment and order state have not been changed by this screen.</p><button onClick={reset} className="mt-6 rounded-full bg-[#681f2c] px-5 py-3 text-sm font-semibold text-white">Try again</button></div></main></body></html>}

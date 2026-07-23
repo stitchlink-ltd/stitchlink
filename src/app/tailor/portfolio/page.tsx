@@ -1,0 +1,3 @@
+import Image from "next/image";
+import { SectionPlaceholder } from "@/components/section-placeholder";
+export default function PortfolioPage(){return <SectionPlaceholder eyebrow="Public profile" title="Portfolio" description="Curate the work customers see before starting a request." action={{label:"Add portfolio piece",href:"/tailor/portfolio/new"}}><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{["38%","51%","72%","88%"].map((position,index)=><div key={position} className="relative aspect-square overflow-hidden rounded-xl"><Image src="/stitchlink-hero.png" alt={`Portfolio piece ${index+1}`} fill className="object-cover" style={{objectPosition:`${position} center`}}/></div>)}</div></SectionPlaceholder>}
