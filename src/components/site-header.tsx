@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Logo } from "./logo";
 import { CurrencySwitcher } from "./price";
+import { ThemeToggle } from "./theme-toggle";
 import { ButtonLink } from "./ui/button";
 
 const links = [
@@ -27,6 +28,7 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="hidden items-center gap-3 md:flex">
+          <ThemeToggle />
           <CurrencySwitcher compact />
           <Link href="/sign-in" className="px-2 text-sm font-semibold hover:text-wine">Sign in</Link>
           <ButtonLink href="/request" className="min-h-10 px-4 py-2">Start a request</ButtonLink>
@@ -51,6 +53,7 @@ export function SiteHeader() {
             ))}
           </nav>
           <div className="mt-4 flex items-center justify-between gap-3">
+            <ThemeToggle />
             <CurrencySwitcher compact />
             <ButtonLink href="/sign-in" variant="secondary" className="flex-1">Sign in</ButtonLink>
             <ButtonLink href="/request" className="flex-1">Start request</ButtonLink>

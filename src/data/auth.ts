@@ -1,10 +1,11 @@
 import "server-only";
 
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isDemoModeEnabled, roleHome, sanitizeNextPath, type AppRole } from "@/lib/auth/rules";
+import { demoRoleCookieName, isDemoModeEnabled, roleHome, sanitizeNextPath, type AppRole } from "@/lib/auth/rules";
 
 export type CurrentAccount = {
   user: User;
@@ -53,9 +54,16 @@ export async function requireAccount() {
 }
 
 export async function requireRole(expected: AppRole) {
+  const demoMode = isDemoModeEnabled(process.env.NODE_ENV, process.env.DEMO_MODE);
+  const cookieStore = await cookies();
+  if (demoMode && cookieStore.get(demoRoleCookieName)?.value === expected) {
+    const labels = { customer: "Nneka Okafor", tailor: "Kola Adeyemi", admin: "Dami Bello" };
+    return { demo: true as const, role: expected, displayName: labels[expected], tailorOnboarded: true };
+  }
+
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
-    if (isDemoModeEnabled(process.env.NODE_ENV, process.env.DEMO_MODE)) {
+    if (demoMode) {
       const labels = { customer: "Nneka Okafor", tailor: "Kola Adeyemi", admin: "Dami Bello" };
       return { demo: true as const, role: expected, displayName: labels[expected], tailorOnboarded: true };
     }

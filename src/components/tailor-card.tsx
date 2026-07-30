@@ -7,7 +7,7 @@ import { Price } from "./price";
 
 export function TailorCard({ tailor, priority = false }: { tailor: Tailor; priority?: boolean }) {
   return (
-    <article className="group overflow-hidden rounded-[1.4rem] border border-line bg-paper transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10">
+    <article className="group overflow-hidden rounded-lg cursor-pointer border border-line bg-paper transition hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10">
       <Link href={`/tailors/${tailor.slug}`} className="relative block aspect-[4/4.5] overflow-hidden bg-[#dccfc0]">
         <Image
           src="/stitchlink-hero.png"

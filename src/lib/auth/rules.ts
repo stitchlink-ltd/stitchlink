@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const publicRoles = ["customer", "tailor"] as const;
 export const oauthCookieNames = { role: "stitchlink_oauth_role", next: "stitchlink_oauth_next" } as const;
+export const demoRoleCookieName = "stitchlink_demo_role";
 export type PublicRole = (typeof publicRoles)[number];
 export type AppRole = PublicRole | "admin";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, LoaderCircle, Send } from "lucide-react";
 import type { PublishedTailor } from "@/data/marketplace";
@@ -17,8 +17,25 @@ async function upload(file: File) {
 }
 
 export function RequestWizard({ initialTailor, tailors }: { initialTailor?: string; tailors: PublishedTailor[] }) {
-  const router = useRouter(); const [pending,startTransition] = useTransition(); const [message,setMessage] = useState(""); const [files,setFiles] = useState<File[]>([]);
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [message, setMessage] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const selected = tailors.find((tailor) => tailor.slug === initialTailor);
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
+  function handleFilesChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = Array.from(event.target.files ?? []).slice(0, 5);
+    setFiles(selectedFiles);
+    setPreviewUrls(selectedFiles.map((file) => URL.createObjectURL(file)));
+    event.currentTarget.value = "";
+  }
   async function submit(formData: FormData) {
     setMessage("");
     try {
@@ -36,8 +53,9 @@ export function RequestWizard({ initialTailor, tailors }: { initialTailor?: stri
       <label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Describe the piece</span><textarea name="description" required minLength={10} rows={5} placeholder="Silhouette, occasion, fabric, colours and details…" className="w-full rounded-xl border border-line bg-background p-4 text-sm"/></label>
       <div className="grid gap-5 sm:grid-cols-2"><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Budget in NGN</span><input name="budgetNgn" type="number" min="50000" step="1000" required className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"/></label><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Measurements</span><select name="measurementMethod" defaultValue="profile" className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"><option value="profile">Use saved profile</option><option value="call">Book a call</option><option value="later">Decide with tailor</option></select></label></div>
       <label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Delivery</span><select name="deliveryPreference" defaultValue="shipping" className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"><option value="shipping">Ship to my address</option><option value="pickup">Pick up from atelier</option><option value="decide_later">Decide with tailor</option></select></label>
-      <label className="grid cursor-pointer place-items-center rounded-xl border border-dashed border-line bg-background p-6 text-center"><ImagePlus className="text-wine"/><span className="mt-2 text-sm font-semibold">Add up to five inspiration images</span><span className="mt-1 text-xs text-muted">JPG, PNG or WEBP · max 10 MB each</span><input type="file" multiple accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event)=>setFiles(Array.from(event.target.files ?? []).slice(0,5))}/></label>
+      <label className="grid cursor-pointer place-items-center rounded-xl border border-dashed border-line bg-background p-6 text-center"><ImagePlus className="text-wine"/><span className="mt-2 text-sm font-semibold">Add up to five inspiration images</span><span className="mt-1 text-xs text-muted">JPG, PNG or WEBP · max 10 MB each</span><input type="file" multiple accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handleFilesChange}/></label>
       {files.length>0&&<p className="text-xs text-muted">{files.length} image{files.length===1?"":"s"} selected</p>}
+      {previewUrls.length>0&&<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{previewUrls.map((url,index)=><div key={`${url}-${index}`} className="overflow-hidden rounded-xl border border-line bg-background"><img src={url} alt={`Inspiration preview ${index + 1}`} className="h-28 w-full object-cover" /></div>)}</div>}
       <label className="flex gap-3 text-xs text-muted"><input name="hasFabric" type="checkbox" className="mt-0.5 accent-wine"/>I already have the fabric.</label>
       {message&&<p className="rounded-xl bg-wine/5 p-3 text-sm text-wine">{message}</p>}
     </div>

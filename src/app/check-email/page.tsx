@@ -2,4 +2,28 @@ import Link from "next/link";
 import { MailCheck } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { EmailActionForm } from "@/components/auth-message-form";
-export default async function CheckEmailPage({searchParams}:PageProps<"/check-email">){const params=await searchParams;const email=typeof params.email==="string"?params.email:"";return <main className="grid min-h-screen place-items-center bg-[#eee6da] p-5"><div className="w-full max-w-md rounded-[2rem] border border-line bg-paper p-7 text-center soft-shadow sm:p-9"><div className="flex justify-center"><Logo /></div><span className="mx-auto mt-8 grid size-14 place-items-center rounded-full bg-wine/10 text-wine"><MailCheck /></span><h1 className="mt-5 font-display text-3xl">Check your inbox</h1><p className="mt-3 text-sm leading-6 text-muted">Open the verification link we sent to finish setting up your StitchLink account. The link is time-limited.</p><EmailActionForm kind="resend" defaultEmail={email}/><Link href="/sign-in" className="mt-6 inline-block text-sm font-semibold text-wine">Return to sign in</Link></div></main>}
+export default async function CheckEmailPage({ searchParams }: PageProps<"/check-email">) {
+  const params = await searchParams;
+  const email = typeof params.email === "string" ? params.email : "";
+  return (
+    <main className="grid min-h-screen place-items-center bg-background p-5">
+      <div className="w-full max-w-md rounded-[2rem] border border-line bg-paper p-7 text-center soft-shadow sm:p-9">
+        <div className="flex justify-center">
+          <Logo />
+        </div>
+        <span className="mx-auto mt-8 grid size-14 place-items-center rounded-full bg-wine/10 text-wine">
+          <MailCheck />
+        </span>
+        <h1 className="mt-5 font-display text-3xl">Check your inbox</h1>
+        <p className="mt-3 text-sm leading-6 text-muted">
+          Open the verification link we sent to finish setting up your StitchLink account. The link
+          is time-limited.
+        </p>
+        <EmailActionForm kind="resend" defaultEmail={email} />
+        <Link href="/sign-in" className="mt-6 inline-block text-sm font-semibold text-wine">
+          Return to sign in
+        </Link>
+      </div>
+    </main>
+  );
+}

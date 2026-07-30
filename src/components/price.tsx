@@ -39,7 +39,7 @@ export function CurrencySwitcher({ compact = false }: { compact?: boolean }) {
           className={cn(
             "rounded-full font-semibold transition",
             compact ? "px-2 py-1 text-[10px]" : "px-3 py-1.5 text-xs",
-            currency === item ? "bg-wine text-white" : "text-muted hover:text-ink",
+            currency === item ? "bg-wine text-white" : "text-muted hover:text-foreground",
           )}
           aria-pressed={currency === item}
         >

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --background: #f8f5ef;
   --foreground: #241d1a;
   --paper: #fffcf7;
@@ -11,6 +12,20 @@
   --wine-dark: #43131c;
   --gold: #b68a50;
   --sage: #31594a;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #151210;
+  --foreground: #f6eee7;
+  --paper: #211b18;
+  --ink: #17110f;
+  --muted: #c2b5ab;
+  --line: #4d4039;
+  --wine: #ad4455;
+  --wine-dark: #7b2937;
+  --gold: #d7ad72;
+  --sage: #5d987f;
 }
 
 @theme inline {
@@ -37,9 +52,11 @@ body {
   color: var(--foreground);
   font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
   text-rendering: optimizeLegibility;
+  transition: background-color .18s ease, color .18s ease;
 }
 
 button, a, input, select, textarea { outline-color: var(--gold); }
+input, select, textarea { color: inherit; }
 
 ::selection { background: #e4c9a4; color: var(--wine-dark); }
 
@@ -60,6 +77,18 @@ button, a, input, select, textarea { outline-color: var(--gold); }
 }
 
 .soft-shadow { box-shadow: 0 20px 65px rgba(58, 35, 25, .10); }
+
+:root[data-theme="dark"] .soft-shadow { box-shadow: 0 20px 65px rgba(0, 0, 0, .28); }
+:root[data-theme="dark"] .bg-\[\#eee6da\],
+:root[data-theme="dark"] .bg-\[\#f4f0e9\] { background-color: var(--background); }
+:root[data-theme="dark"] .bg-\[\#f0e2d0\],
+:root[data-theme="dark"] .bg-\[\#e7efe9\],
+:root[data-theme="dark"] .bg-\[\#e3eee8\],
+:root[data-theme="dark"] .bg-\[\#f0eae1\],
+:root[data-theme="dark"] .bg-\[\#f4e8d5\],
+:root[data-theme="dark"] .bg-\[\#dccfc0\],
+:root[data-theme="dark"] .bg-\[\#d9ccbc\],
+:root[data-theme="dark"] .bg-\[\#ded0bf\] { background-color: var(--paper); }
 
 .line-clamp-2 {
   display: -webkit-box;

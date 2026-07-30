@@ -1,4 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import nextEnv from "@next/env";
+
+const { loadEnvConfig } = nextEnv;
+loadEnvConfig(process.cwd(), true);
 
 const emailIndex = process.argv.indexOf("--email");
 const nameIndex = process.argv.indexOf("--name");
@@ -7,8 +11,12 @@ const displayName = nameIndex >= 0 ? process.argv[nameIndex + 1] : "StitchLink A
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!email || !url || !serviceRoleKey) {
+if (!email) {
   console.error("Usage: npm run admin:invite -- --email admin@example.com --name \"Admin Name\"");
+  process.exit(1);
+}
+
+if (!url || !serviceRoleKey) {
   console.error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.");
   process.exit(1);
 }

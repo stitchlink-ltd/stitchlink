@@ -4,10 +4,10 @@ import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const variants = {
-  primary: "bg-wine text-white hover:bg-wine-dark border-wine",
-  secondary: "bg-paper text-ink hover:bg-[#f2ebe1] border-line",
+  primary: "bg-wine text-white hover:bg-wine-dark border-gray-200",
+  secondary: "bg-paper text-foreground hover:bg-background border-line",
   dark: "bg-ink text-white hover:bg-black border-ink",
-  ghost: "bg-transparent text-ink hover:bg-black/5 border-transparent",
+  ghost: "bg-transparent text-foreground hover:bg-black/5 border-transparent",
 };
 
 type ButtonLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
@@ -16,13 +16,19 @@ type ButtonLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   arrow?: boolean;
 };
 
-export function ButtonLink({ className, variant = "primary", arrow, children, ...props }: ButtonLinkProps) {
+export function ButtonLink({
+  className,
+  variant = "primary",
+  arrow,
+  children,
+  ...props
+}: ButtonLinkProps) {
   return (
     <Link
       className={cn(
-        "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2",
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2",
         variants[variant],
-        className,
+        className
       )}
       {...props}
     >
@@ -40,7 +46,7 @@ export function Button({ className, variant = "primary", ...props }: ButtonProps
       className={cn(
         "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
         variants[variant],
-        className,
+        className
       )}
       {...props}
     />

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { CurrencyProvider } from "@/components/currency-provider";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import "./globals.css";
@@ -30,13 +31,22 @@ export const metadata: Metadata = {
   twitter: { card: "summary", title: "StitchLink", description: "Exceptional tailoring, without the distance.", images: ["/stitchlink-mark.png"] },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
+    <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth" data-theme="light" suppressHydrationWarning>
+      <head>
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: "(function(){try{var theme=localStorage.getItem('stitchlink-theme');if(theme==='dark'||theme==='light')document.documentElement.dataset.theme=theme;}catch(error){}})()",
+          }}
+        />
+      </head>
       <body className="flex min-h-full flex-col">
         <CurrencyProvider>{children}</CurrencyProvider>
         <ServiceWorkerRegistration />
