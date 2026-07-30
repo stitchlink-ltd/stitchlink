@@ -33,5 +33,7 @@ export async function completeTailorOnboarding(_state: AuthActionState, formData
     specialties: result.data.specialties.split(",").map((item)=>item.trim()).filter(Boolean).slice(0,12),
   });
   if (error && error.code !== "23505") return { status: "error", message: "We could not save your atelier. Please try again." };
+  const { data: existingApplication } = await supabase.from("tailor_applications").select("id").eq("tailor_id",account.user.id).maybeSingle();
+  if (!existingApplication) await supabase.from("tailor_applications").insert({ tailor_id: account.user.id, status: "draft" });
   redirect("/tailor");
 }

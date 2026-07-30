@@ -1,37 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, Check, ChevronLeft, ChevronRight, ImagePlus, Info, Ruler, Sparkles, Upload } from "lucide-react";
-import { tailors } from "@/lib/demo-data";
+import { ImagePlus, LoaderCircle, Send } from "lucide-react";
+import type { PublishedTailor } from "@/data/marketplace";
+import { marketplaceInitialState, submitRequest } from "@/app/marketplace/actions";
 import { Button } from "./ui/button";
-import { Price } from "./price";
 
-const garments = ["Agbada", "Dress", "Suit", "Kaftan", "Bridal look", "Two-piece", "Other"];
+async function upload(file: File) {
+  const response = await fetch("/api/uploads/sign", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category: "request", mimeType: file.type, sizeBytes: file.size }) });
+  const signed = await response.json();
+  if (!response.ok) throw new Error(signed.error ?? "Unable to upload an image.");
+  const stored = await fetch(signed.signedUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+  if (!stored.ok) throw new Error("Unable to store an image.");
+  return { path: signed.path, mimeType: file.type, sizeBytes: file.size };
+}
 
-export function RequestWizard({ initialTailor }: { initialTailor?: string }) {
-  const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [tailor, setTailor] = useState(initialTailor ?? "");
-  const [garment, setGarment] = useState("");
-  const [measurement, setMeasurement] = useState("profile");
-  const selectedTailor = tailors.find((item) => item.slug === tailor);
-
-  return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-8 flex items-center justify-center gap-2" aria-label={`Step ${step} of 4`}>
-        {[1,2,3,4].map((item) => <span key={item} className={`h-1.5 rounded-full transition-all ${item <= step ? "w-12 bg-wine" : "w-7 bg-line"}`} />)}
-      </div>
-      <form onSubmit={(event) => { event.preventDefault(); router.push("/customer?created=1"); }} className="overflow-hidden rounded-[2rem] border border-line bg-paper soft-shadow">
-        <div className="border-b border-line px-6 py-7 sm:px-10"><p className="eyebrow text-wine">Custom request · Step {step} of 4</p><h1 className="mt-2 font-display text-4xl">{step===1?"What are we making?":step===2?"Show us your vision.":step===3?"How will we get the fit right?":"Timing and budget."}</h1><p className="mt-2 text-sm leading-6 text-muted">{step===1?"Choose an atelier now, or let us help you find one after posting.":step===2?"The more context you share, the clearer your first quote will be.":step===3?"Your saved measurements are shared only with the tailor for this order.":"Set honest expectations — you can negotiate every detail before paying."}</p></div>
-        <div className="min-h-[390px] p-6 sm:p-10">
-          {step === 1 && <div className="space-y-7"><fieldset><legend className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">Garment type</legend><div className="flex flex-wrap gap-2">{garments.map((item)=><button key={item} type="button" onClick={()=>setGarment(item)} className={`rounded-full border px-4 py-2.5 text-sm transition ${garment===item?"border-wine bg-wine text-white":"border-line hover:border-wine/40"}`}>{item}</button>)}</div></fieldset><label className="block"><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Preferred atelier</span><select value={tailor} onChange={(event)=>setTailor(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm outline-none"><option value="">Match me with verified tailors</option>{tailors.map((item)=><option key={item.id} value={item.slug}>{item.studio} · Grade {item.grade} · {item.capacity-item.activeJobs} slots</option>)}</select></label>{selectedTailor&&<div className="flex items-center justify-between rounded-xl bg-[#eee6da] p-4 text-sm"><div><strong>{selectedTailor.studio}</strong><p className="mt-0.5 text-xs text-muted">Typical work starts at <Price kobo={selectedTailor.startingPriceKobo} /></p></div><span className="rounded-full bg-white px-3 py-1 text-xs font-semibold">Grade {selectedTailor.grade}</span></div>}</div>}
-          {step === 2 && <div className="space-y-6"><label className="block"><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Describe the piece</span><textarea required rows={6} className="w-full rounded-xl border border-line bg-background p-4 text-sm leading-6 outline-none" placeholder="Tell the tailor about the silhouette, occasion, fabric, colours and details you love…" /></label><label className="grid cursor-pointer place-items-center rounded-xl border border-dashed border-line bg-background p-8 text-center transition hover:border-wine/50"><ImagePlus size={25} className="text-wine" /><span className="mt-2 text-sm font-semibold">Add inspiration images</span><span className="mt-1 text-xs text-muted">JPG, PNG or WEBP · up to 10 MB each</span><input type="file" multiple accept="image/jpeg,image/png,image/webp" className="sr-only" /></label><label className="flex items-center gap-3 rounded-xl border border-line p-4 text-sm"><input type="checkbox" className="size-4 accent-wine" /> I already have the fabric</label></div>}
-          {step === 3 && <div className="grid gap-3 sm:grid-cols-3">{[["profile",Ruler,"Use saved profile","Share a versioned measurement set after quote acceptance."],["call",Calendar,"Book a video call","Choose a time and add a Meet, Zoom or Teams link."],["later",Sparkles,"Decide with tailor","Discuss the best approach in your request thread."]].map(([value,Icon,title,body])=>{const MethodIcon=Icon as typeof Ruler;return <button key={value as string} type="button" onClick={()=>setMeasurement(value as string)} className={`rounded-2xl border p-5 text-left transition ${measurement===value?"border-wine bg-wine/5":"border-line hover:border-wine/40"}`}><span className={`grid size-10 place-items-center rounded-full ${measurement===value?"bg-wine text-white":"bg-[#eee6da] text-wine"}`}><MethodIcon size={18} /></span><span className="mt-5 block font-display text-xl font-semibold">{title as string}</span><span className="mt-2 block text-xs leading-5 text-muted">{body as string}</span>{measurement===value&&<Check size={16} className="mt-4 text-wine" />}</button>})}<div className="col-span-full mt-3 flex gap-2 rounded-xl bg-[#eef3f0] p-4 text-xs leading-5 text-sage"><Info size={16} className="mt-0.5 shrink-0" /> Measurements are encrypted in transit and available only to you, your selected tailor, and authorized dispute staff when required.</div></div>}
-          {step === 4 && <div className="space-y-6"><div className="grid gap-5 sm:grid-cols-2"><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Needed by</span><input type="date" required className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm outline-none" /></label><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Budget in NGN</span><input type="number" required min="50000" step="1000" placeholder="250,000" className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm outline-none" /></label></div><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Delivery preference</span><select className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm outline-none"><option>Ship to my address</option><option>Pick up from the atelier</option><option>Decide with tailor</option></select></label><div className="rounded-2xl border border-line bg-[#eee6da] p-5"><p className="font-semibold">Nothing is charged yet.</p><p className="mt-1 text-sm leading-6 text-muted">The tailor will respond with a versioned quote. You can negotiate, then pay a 50% deposit in exact NGN through Paystack when you accept.</p></div><label className="flex gap-3 text-xs leading-5 text-muted"><input type="checkbox" required className="mt-0.5 size-4 shrink-0 accent-wine" /> I confirm this request is accurate and agree to StitchLink&apos;s marketplace terms and privacy notice.</label></div>}
-        </div>
-        <div className="flex items-center justify-between border-t border-line bg-background px-6 py-5 sm:px-10"><Button type="button" variant="ghost" disabled={step===1} onClick={()=>setStep((value)=>Math.max(1,value-1))}><ChevronLeft size={16} /> Back</Button>{step<4?<Button type="button" disabled={step===1&&!garment} onClick={()=>setStep((value)=>Math.min(4,value+1))}>Continue <ChevronRight size={16} /></Button>:<Button type="submit"><Upload size={16} /> Submit request</Button>}</div>
-      </form>
+export function RequestWizard({ initialTailor, tailors }: { initialTailor?: string; tailors: PublishedTailor[] }) {
+  const router = useRouter(); const [pending,startTransition] = useTransition(); const [message,setMessage] = useState(""); const [files,setFiles] = useState<File[]>([]);
+  const selected = tailors.find((tailor) => tailor.slug === initialTailor);
+  async function submit(formData: FormData) {
+    setMessage("");
+    try {
+      const images = await Promise.all(files.map(upload)); formData.set("images",JSON.stringify(images));
+      const state = await submitRequest(marketplaceInitialState,formData);
+      if (state.status === "success") router.push("/customer?created=1"); else setMessage(state.message ?? "Check the form and try again.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to submit your request."); }
+  }
+  return <form action={(formData)=>startTransition(()=>void submit(formData))} className="mx-auto max-w-3xl overflow-hidden rounded-[2rem] border border-line bg-paper soft-shadow">
+    <div className="border-b border-line px-6 py-7 sm:px-10"><p className="eyebrow text-wine">Custom request</p><h1 className="mt-2 font-display text-4xl">Tell your tailor what you need.</h1><p className="mt-2 text-sm leading-6 text-muted">Nothing is charged until you accept a structured quote.</p></div>
+    <div className="grid gap-5 p-6 sm:p-10">
+      <label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Tailor</span><select name="tailorId" defaultValue={selected?.id ?? ""} required className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"><option value="">Choose a verified tailor</option>{tailors.map((tailor)=><option key={tailor.id} value={tailor.id}>{tailor.studioName} · {tailor.city}</option>)}</select></label>
+      {tailors.length===0&&<p className="rounded-xl bg-wine/5 p-3 text-sm text-wine">There are no verified tailors available yet.</p>}
+      <div className="grid gap-5 sm:grid-cols-2"><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Garment type</span><input name="garmentType" required placeholder="Agbada, dress, suit…" className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"/></label><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Needed by</span><input name="neededBy" type="date" required className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"/></label></div>
+      <label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Describe the piece</span><textarea name="description" required minLength={10} rows={5} placeholder="Silhouette, occasion, fabric, colours and details…" className="w-full rounded-xl border border-line bg-background p-4 text-sm"/></label>
+      <div className="grid gap-5 sm:grid-cols-2"><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Budget in NGN</span><input name="budgetNgn" type="number" min="50000" step="1000" required className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"/></label><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Measurements</span><select name="measurementMethod" defaultValue="profile" className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"><option value="profile">Use saved profile</option><option value="call">Book a call</option><option value="later">Decide with tailor</option></select></label></div>
+      <label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Delivery</span><select name="deliveryPreference" defaultValue="shipping" className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"><option value="shipping">Ship to my address</option><option value="pickup">Pick up from atelier</option><option value="decide_later">Decide with tailor</option></select></label>
+      <label className="grid cursor-pointer place-items-center rounded-xl border border-dashed border-line bg-background p-6 text-center"><ImagePlus className="text-wine"/><span className="mt-2 text-sm font-semibold">Add up to five inspiration images</span><span className="mt-1 text-xs text-muted">JPG, PNG or WEBP · max 10 MB each</span><input type="file" multiple accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event)=>setFiles(Array.from(event.target.files ?? []).slice(0,5))}/></label>
+      {files.length>0&&<p className="text-xs text-muted">{files.length} image{files.length===1?"":"s"} selected</p>}
+      <label className="flex gap-3 text-xs text-muted"><input name="hasFabric" type="checkbox" className="mt-0.5 accent-wine"/>I already have the fabric.</label>
+      {message&&<p className="rounded-xl bg-wine/5 p-3 text-sm text-wine">{message}</p>}
     </div>
-  );
+    <div className="flex justify-end border-t border-line bg-background px-6 py-5 sm:px-10"><Button disabled={pending||tailors.length===0}>{pending?<><LoaderCircle size={16} className="animate-spin"/>Submitting</>:<><Send size={16}/>Submit request</>}</Button></div>
+  </form>;
 }

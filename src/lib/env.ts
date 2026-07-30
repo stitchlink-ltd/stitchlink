@@ -14,7 +14,10 @@ const schema = z.object({
   OPEN_EXCHANGE_RATES_APP_ID: z.preprocess(emptyToUndefined, z.string().optional()),
   CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(24).optional()),
   RESEND_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  RESEND_FROM_EMAIL: z.preprocess(emptyToUndefined, z.email().optional()),
   SENTRY_DSN: z.preprocess(emptyToUndefined, z.url().optional()),
+  UPSTASH_REDIS_REST_URL: z.preprocess(emptyToUndefined, z.url().optional()),
+  UPSTASH_REDIS_REST_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   DEMO_MODE: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).default("false")),
 });
@@ -29,7 +32,10 @@ export const env = schema.parse({
   OPEN_EXCHANGE_RATES_APP_ID: process.env.OPEN_EXCHANGE_RATES_APP_ID,
   CRON_SECRET: process.env.CRON_SECRET,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
+  RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
   SENTRY_DSN: process.env.SENTRY_DSN,
+  UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+  UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
   DEMO_MODE: process.env.DEMO_MODE,
 });

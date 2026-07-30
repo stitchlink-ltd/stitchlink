@@ -1,10 +1,13 @@
 import { z } from "zod";
 import { verifyPaystackSignature, verifyPaystackTransaction } from "@/lib/paystack";
+import { enforceRateLimit, requestIdentifier } from "@/lib/rate-limit";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const eventSchema=z.object({event:z.string(),data:z.object({id:z.number(),reference:z.string(),amount:z.number(),currency:z.string(),status:z.string()}).passthrough()});
 
 export async function POST(request:Request){
+  const rate=await enforceRateLimit("paystack_webhook",requestIdentifier(request),120);
+  if(!rate.success)return new Response("Too many requests",{status:429});
   const raw=await request.text();
   if(!verifyPaystackSignature(raw,request.headers.get("x-paystack-signature")))return new Response("Invalid signature",{status:401});
   const parsed=eventSchema.safeParse(JSON.parse(raw));
