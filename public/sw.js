@@ -1,7 +1,7 @@
-const SHELL_CACHE="stitchlink-shell-v1";
-const PUBLIC_ASSETS=["/","/tailors","/stitchlink-mark.svg","/stitchlink-hero.png"];
+const SHELL_CACHE="stitchlink-shell-v2";
+const PUBLIC_ASSETS=["/","/tailors","/stitchlink-mark.png","/icon-192.png","/stitchlink-hero.png"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(SHELL_CACHE).then(cache=>cache.addAll(PUBLIC_ASSETS)));self.skipWaiting()});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==SHELL_CACHE).map(key=>caches.delete(key)))));self.clients.claim()});
 self.addEventListener("fetch",event=>{const url=new URL(event.request.url);if(event.request.method!=="GET"||url.origin!==self.location.origin)return;if(url.pathname.startsWith("/customer")||url.pathname.startsWith("/tailor")||url.pathname.startsWith("/admin")||url.pathname.startsWith("/api"))return;event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(SHELL_CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match(event.request))) });
-self.addEventListener("push",event=>{const data=event.data?.json?.()??{title:"StitchLink",body:"You have a new update."};event.waitUntil(self.registration.showNotification(data.title,{body:data.body,icon:"/stitchlink-mark.svg",data:{url:data.url??"/customer"}}))});
+self.addEventListener("push",event=>{const data=event.data?.json?.()??{title:"StitchLink",body:"You have a new update."};event.waitUntil(self.registration.showNotification(data.title,{body:data.body,icon:"/icon-192.png",badge:"/icon-192.png",data:{url:data.url??"/customer"}}))});
 self.addEventListener("notificationclick",event=>{event.notification.close();event.waitUntil(clients.openWindow(event.notification.data?.url??"/"))});

@@ -1,19 +1,22 @@
 import "server-only";
 import { z } from "zod";
 
+const emptyToUndefined = (value: unknown) =>
+  typeof value === "string" && value.trim() === "" ? undefined : value;
+
 const schema = z.object({
-  NEXT_PUBLIC_SITE_URL: z.url().default("http://localhost:3000"),
-  NEXT_PUBLIC_SUPABASE_URL: z.url().optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20).optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
-  PAYSTACK_SECRET_KEY: z.string().startsWith("sk_").optional(),
-  PAYSTACK_PUBLIC_KEY: z.string().startsWith("pk_").optional(),
-  OPEN_EXCHANGE_RATES_APP_ID: z.string().optional(),
-  CRON_SECRET: z.string().min(24).optional(),
-  RESEND_API_KEY: z.string().optional(),
-  SENTRY_DSN: z.url().optional(),
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1).optional(),
-  DEMO_MODE: z.enum(["true", "false"]).default("false"),
+  NEXT_PUBLIC_SITE_URL: z.preprocess(emptyToUndefined, z.url().default("http://localhost:3000")),
+  NEXT_PUBLIC_SUPABASE_URL: z.preprocess(emptyToUndefined, z.url().optional()),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.preprocess(emptyToUndefined, z.string().min(20).optional()),
+  SUPABASE_SERVICE_ROLE_KEY: z.preprocess(emptyToUndefined, z.string().min(20).optional()),
+  PAYSTACK_SECRET_KEY: z.preprocess(emptyToUndefined, z.string().startsWith("sk_").optional()),
+  PAYSTACK_PUBLIC_KEY: z.preprocess(emptyToUndefined, z.string().startsWith("pk_").optional()),
+  OPEN_EXCHANGE_RATES_APP_ID: z.preprocess(emptyToUndefined, z.string().optional()),
+  CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(24).optional()),
+  RESEND_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  SENTRY_DSN: z.preprocess(emptyToUndefined, z.url().optional()),
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  DEMO_MODE: z.preprocess(emptyToUndefined, z.enum(["true", "false"]).default("false")),
 });
 
 export const env = schema.parse({

@@ -446,7 +446,10 @@ create table public.webhook_events (
   processed_at timestamptz not null default now()
 );
 
-create index tailor_profiles_search_idx on public.tailor_profiles using gin (to_tsvector('english',studio_name || ' ' || bio || ' ' || city || ' ' || array_to_string(specialties,' ')));
+-- Keep the expression index strictly immutable. PostgreSQL marks array_to_string as
+-- stable, so specialties use their own native array GIN index instead.
+create index tailor_profiles_search_idx on public.tailor_profiles using gin (to_tsvector('english'::regconfig,studio_name || ' ' || bio || ' ' || city));
+create index tailor_profiles_specialties_idx on public.tailor_profiles using gin (specialties);
 create index orders_customer_idx on public.orders(customer_id,status);
 create index orders_tailor_idx on public.orders(tailor_id,status);
 create index messages_conversation_idx on public.messages(conversation_id,created_at);

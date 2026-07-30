@@ -13,11 +13,19 @@ export const metadata: Metadata = {
     "Discover verified Nigerian tailors, commission custom pieces, share measurements securely, and follow every stitch.",
   applicationName: "StitchLink",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/icon-192.png", type: "image/png", sizes: "192x192" }, { url: "/icon-512.png", type: "image/png", sizes: "512x512" }],
+    shortcut: "/favicon.ico",
+    apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
+  },
   openGraph: {
     title: "StitchLink",
     description: "Exceptional tailoring, without the distance.",
-    images: ["/stitchlink-hero.png"],
+    type: "website",
+    siteName: "StitchLink",
+    images: [{ url: "/stitchlink-mark.png", width: 1254, height: 1254, alt: "StitchLink needle and thread monogram" }],
   },
+  twitter: { card: "summary", title: "StitchLink", description: "Exceptional tailoring, without the distance.", images: ["/stitchlink-mark.png"] },
 };
 
 export default function RootLayout({

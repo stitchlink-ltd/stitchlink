@@ -40,7 +40,11 @@ export async function signIn(_state: AuthActionState, formData: FormData): Promi
   const { error } = await supabase.auth.signInWithPassword({ email: result.data.email, password: result.data.password });
   if (error) return genericAuthError();
   const account = await getCurrentUser();
-  if (!account || !account.user.email_confirmed_at) {
+  if (!account) {
+    await supabase.auth.signOut({ scope: "local" });
+    return { status: "error", message: "Your email is confirmed, but the marketplace profile database has not been set up. Apply the Supabase migrations and try again." };
+  }
+  if (!account.user.email_confirmed_at) {
     await supabase.auth.signOut({ scope: "local" });
     return { status: "error", message: "Confirm your email before signing in. You can resend the link below." };
   }

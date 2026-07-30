@@ -29,7 +29,12 @@ function GoogleButton({ role, next }: { role: "customer" | "tailor"; next?: stri
 }
 
 function StatusMessage({ state, queryError }: { state: AuthActionState; queryError?: string }) {
-  const message = state.message ?? (queryError ? "We could not complete that request. Please try again." : undefined);
+  const queryMessage = queryError === "profile"
+    ? "Your email is confirmed, but the marketplace profile database has not been set up. Apply the Supabase migrations and try again."
+    : queryError
+      ? "We could not complete that request. Please try again."
+      : undefined;
+  const message = state.message ?? queryMessage;
   if (!message) return null;
   return <div className={`mt-4 rounded-xl border px-4 py-3 text-sm ${state.status === "success" ? "border-sage/20 bg-sage/5 text-sage" : "border-wine/20 bg-wine/5 text-wine"}`} role={state.status === "error" ? "alert" : "status"} aria-live="polite">{message}</div>;
 }
