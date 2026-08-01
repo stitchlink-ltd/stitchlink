@@ -301,7 +301,7 @@ export default function Home() {
         <div className="text-center">
           <p className="eyebrow text-wine">Stories stitched across borders</p>
           <h2 className="mt-3 font-display text-4xl sm:text-5xl">
-            Made in Lagos. Loved everywhere.
+            Made in Nigeria. Loved everywhere.
           </h2>
         </div>
         <div className="mt-10 grid gap-5 md:grid-cols-2">

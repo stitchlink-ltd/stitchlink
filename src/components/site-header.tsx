@@ -1,27 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Logo } from "./logo";
 import { CurrencySwitcher } from "./price";
 import { ThemeToggle } from "./theme-toggle";
 import { ButtonLink } from "./ui/button";
 
-const links = [
+export const publicNavLinks = [
   ["Find a tailor", "/tailors"],
   ["How it works", "/#how-it-works"],
   ["Why StitchLink", "/#why"],
 ] as const;
 
-export function SiteHeader() {
-  const [open, setOpen] = useState(false);
+export function SiteHeader({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
     <header className="sticky top-0 z-50 border-b border-line/80 bg-background/90 backdrop-blur-xl">
       <div className="container-shell flex h-[72px] items-center justify-between">
         <Logo />
         <nav className="hidden items-center gap-8 md:flex" aria-label="Main navigation">
-          {links.map(([label, href]) => (
+          {publicNavLinks.map(([label, href]) => (
             <Link key={href} href={href} className="text-sm font-medium text-muted transition hover:text-wine">
               {label}
             </Link>
@@ -36,30 +34,13 @@ export function SiteHeader() {
         <button
           type="button"
           className="grid size-10 place-items-center rounded-full border border-line md:hidden"
-          onClick={() => setOpen((value) => !value)}
+          onClick={onToggle}
           aria-label="Toggle navigation"
           aria-expanded={open}
         >
           {open ? <X size={19} /> : <Menu size={19} />}
         </button>
       </div>
-      {open && (
-        <div className="border-t border-line bg-paper px-4 pb-5 pt-3 md:hidden">
-          <nav className="flex flex-col" aria-label="Mobile navigation">
-            {links.map(([label, href]) => (
-              <Link key={href} href={href} onClick={() => setOpen(false)} className="border-b border-line py-3 font-medium">
-                {label}
-              </Link>
-            ))}
-          </nav>
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <ThemeToggle />
-            <CurrencySwitcher compact />
-            <ButtonLink href="/sign-in" variant="secondary" className="flex-1">Sign in</ButtonLink>
-            <ButtonLink href="/request" className="flex-1">Start request</ButtonLink>
-          </div>
-        </div>
-      )}
     </header>
   );
 }

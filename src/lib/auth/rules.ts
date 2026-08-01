@@ -45,8 +45,12 @@ export const updatePasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const updateDisplayNameSchema = z.object({
+  displayName: z.string().trim().min(2, "Enter your name.").max(100, "Name is too long."),
+});
+
 export type AuthFieldErrors = Partial<
-  Record<"fullName" | "email" | "role" | "password" | "confirmPassword" | "terms" | "captchaToken" | "studioName" | "bio" | "city" | "state" | "specialties", string[]>
+  Record<"fullName" | "email" | "role" | "password" | "confirmPassword" | "terms" | "captchaToken" | "studioName" | "bio" | "city" | "state" | "specialties" | "displayName", string[]>
 >;
 
 export type AuthActionState = {

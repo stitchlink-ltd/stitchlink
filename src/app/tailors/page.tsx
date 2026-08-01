@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { PublicShell } from "@/components/public-shell";
 import { TailorDirectory } from "@/components/tailor-directory";
-import { tailors } from "@/lib/demo-data";
+import { getPublishedTailorDirectory } from "@/data/marketplace";
 
 export const metadata: Metadata = { title: "Find a tailor", description: "Explore verified Nigerian tailors by specialty, grade and availability." };
 
-export default function TailorsPage() {
+export default async function TailorsPage() {
+  const tailors = await getPublishedTailorDirectory();
   return (
     <PublicShell>
       <section className="border-b border-line bg-background py-16">

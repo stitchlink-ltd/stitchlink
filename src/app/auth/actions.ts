@@ -2,12 +2,14 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import {
   emailSchema,
   genericAuthError,
   oauthCookieNames,
   signInSchema,
   signUpSchema,
+  updateDisplayNameSchema,
   updatePasswordSchema,
   type AuthActionState,
   type PublicRole,
@@ -148,4 +150,24 @@ export async function signOut() {
   const supabase = await createSupabaseServerClient();
   if (supabase) await supabase.auth.signOut({ scope: "local" });
   redirect("/sign-in");
+}
+
+export async function updateDisplayName(_state: AuthActionState, formData: FormData): Promise<AuthActionState> {
+  const result = updateDisplayNameSchema.safeParse({ displayName: formData.get("displayName") });
+  if (!result.success) return { status: "error", fieldErrors: fieldErrors(result.error) };
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return genericAuthError();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return genericAuthError();
+  const { error } = await supabase.from("profiles").update({ display_name: result.data.displayName }).eq("id", user.id);
+  if (error) return genericAuthError();
+  revalidatePath("/account");
+  return { status: "success", message: "Your name has been updated." };
+}
+
+export async function resetAuthenticatorFactor(formData: FormData): Promise<void> {
+  const factorId = String(formData.get("factorId") ?? "");
+  const supabase = await createSupabaseServerClient();
+  if (supabase && factorId) await supabase.auth.mfa.unenroll({ factorId });
+  redirect("/mfa");
 }

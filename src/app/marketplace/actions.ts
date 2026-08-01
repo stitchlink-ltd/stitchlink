@@ -136,6 +136,20 @@ export async function createBalanceLink(orderId: string): Promise<MarketplaceAct
   } catch(error){return errorState(error);}
 }
 
+export async function reviewApplication(applicationId: string, approved: boolean, reason = ""): Promise<MarketplaceActionState> {
+  try {
+    const account = await requireRole("admin");
+    if ("demo" in account) return { status: "success", message: approved ? "Demo: application approved." : "Demo: application rejected." };
+    const supabase = await currentSupabase();
+    const { error } = await supabase.rpc("admin_review_application", { p_application_id: applicationId, p_approved: approved, p_reason: reason });
+    if (error) throw new Error(error.message);
+    revalidatePath("/admin/verification");
+    revalidatePath("/tailors");
+    revalidatePath("/tailors/[slug]", "page");
+    return { status: "success", message: approved ? "Tailor approved and published." : "Application rejected." };
+  } catch (error) { return errorState(error); }
+}
+
 export async function recordPayout(payoutId: string, providerReference: string): Promise<MarketplaceActionState> {
   try {const account=await requireRole("admin");if("demo" in account)return{status:"success"};const supabase=await currentSupabase();const{error}=await supabase.rpc("admin_record_payout",{p_payout_id:payoutId,p_provider_reference:providerReference});if(error)throw new Error(error.message);revalidatePath("/admin/payments");revalidatePath("/tailor/earnings");return{status:"success",message:"External payout recorded."};}catch(error){return errorState(error);}
 }
