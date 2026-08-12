@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
-import { ArrowRight, Scissors } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { StatusPill } from "@/components/dashboard-ui";
 import { useBoardJobs } from "@/lib/mock-board";
+import { stageIcon, stageIconClasses, stageProgressColor } from "@/lib/stage-color";
 
 export function TailorActiveJobs() {
   const { jobs } = useBoardJobs();
@@ -10,10 +11,12 @@ export function TailorActiveJobs() {
 
   return (
     <div className="divide-y divide-line">
-      {sorted.map((job) => (
+      {sorted.map((job) => {
+        const Icon = stageIcon(job.stage);
+        return (
         <Link href="/tailor/jobs" key={job.id} className="flex items-center gap-4 p-5 hover:bg-background">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-background text-wine">
-            <Scissors size={18} />
+          <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${stageIconClasses(job.stage)}`}>
+            <Icon size={18} />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -24,7 +27,7 @@ export function TailorActiveJobs() {
               {job.owner} · {job.code}
             </p>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-line">
-              <div className="h-full bg-wine" style={{ width: `${job.progress}%` }} />
+              <div className={`h-full ${stageProgressColor(job.stage)}`} style={{ width: `${job.progress}%` }} />
             </div>
           </div>
           <div className="text-right">
@@ -33,7 +36,8 @@ export function TailorActiveJobs() {
           </div>
           <ArrowRight size={15} />
         </Link>
-      ))}
+        );
+      })}
     </div>
   );
 }

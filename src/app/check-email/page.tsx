@@ -11,7 +11,7 @@ export default async function CheckEmailPage({ searchParams }: PageProps<"/check
         <div className="flex justify-center">
           <Logo />
         </div>
-        <span className="mx-auto mt-8 grid size-14 place-items-center rounded-full bg-wine/10 text-wine">
+        <span className="mx-auto mt-8 grid size-14 place-items-center rounded-full bg-blue/10 text-blue">
           <MailCheck />
         </span>
         <h1 className="mt-5 font-display text-3xl">Check your inbox</h1>

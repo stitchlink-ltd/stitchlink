@@ -1,6 +1,7 @@
 export const orderTransitions = {
+  pending_payment: ["active", "cancelled"],
   pending_deposit: ["active", "cancelled"],
-  active: ["awaiting_balance", "cancelled", "disputed"],
+  active: ["awaiting_balance", "shipped", "cancelled", "disputed"],
   awaiting_balance: ["ready", "cancelled", "disputed"],
   ready: ["shipped", "delivered", "disputed"],
   shipped: ["delivered", "disputed"],

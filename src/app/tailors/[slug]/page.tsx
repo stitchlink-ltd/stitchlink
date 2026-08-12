@@ -21,6 +21,7 @@ export default async function TailorProfilePage({ params }: PageProps<"/tailors/
   const tailor = await getPublishedTailorProfile(slug);
   if (!tailor) notFound();
   const directory = await getPublishedTailorDirectory();
+  const initials = tailor.name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
   return (
     <PublicShell>
       <section className="container-shell py-5"><Link href="/tailors" className="inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-wine"><ChevronLeft size={14} /> All tailors</Link></section>
@@ -37,6 +38,27 @@ export default async function TailorProfilePage({ params }: PageProps<"/tailors/
           <div className="mt-auto pt-8"><div className="mb-4 flex items-end justify-between"><div><p className="text-xs text-muted">Projects from</p><Price kobo={tailor.startingPriceKobo} className="font-display text-3xl font-semibold" /></div><p className="flex items-center gap-1 text-xs text-muted"><CalendarClock size={14} /> {tailor.turnaround}</p></div><div className="grid gap-3 sm:grid-cols-2"><ButtonLink href={`/request?tailor=${tailor.slug}`} className="w-full">Request a quote</ButtonLink><ButtonLink href="/sign-in" variant="secondary" className="w-full"><MessageCircle size={16} /> Message atelier</ButtonLink></div></div>
         </div>
       </section>
+      <section className="container-shell pb-20"><div className="grid gap-10 rounded-[2rem] border border-line bg-paper p-8 sm:p-10 lg:grid-cols-[.32fr_.68fr]">
+        <div className="flex flex-col items-start gap-5">
+          <div className="grid size-24 shrink-0 place-items-center rounded-full bg-wine font-display text-3xl font-semibold text-white" aria-hidden="true">{initials}</div>
+          <div>
+            <p className="eyebrow text-wine">About the maker</p>
+            <h2 className="mt-2 font-display text-3xl">{tailor.name}</h2>
+            <p className="mt-1 text-sm text-muted">Founder &amp; lead tailor, {tailor.studio}</p>
+          </div>
+        </div>
+        <div>
+          <p className="max-w-2xl text-base leading-7 text-muted">{tailor.bio}</p>
+          <dl className="mt-7 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
+            <div><dt className="text-[10px] uppercase tracking-wider text-muted">Studio</dt><dd className="mt-1 text-sm font-semibold">{tailor.studio}</dd></div>
+            <div><dt className="text-[10px] uppercase tracking-wider text-muted">Location</dt><dd className="mt-1 text-sm font-semibold">{tailor.location}</dd></div>
+            <div><dt className="text-[10px] uppercase tracking-wider text-muted">Grade</dt><dd className="mt-1 text-sm font-semibold">Grade {tailor.grade}</dd></div>
+            <div><dt className="text-[10px] uppercase tracking-wider text-muted">Specialties</dt><dd className="mt-1 text-sm font-semibold">{tailor.specialties.join(", ")}</dd></div>
+            <div><dt className="text-[10px] uppercase tracking-wider text-muted">Turnaround</dt><dd className="mt-1 text-sm font-semibold">{tailor.turnaround}</dd></div>
+            <div><dt className="text-[10px] uppercase tracking-wider text-muted">Verification</dt><dd className="mt-1 flex items-center gap-1 text-sm font-semibold text-sage"><ShieldCheck size={14} /> Identity checked</dd></div>
+          </dl>
+        </div>
+      </div></section>
       <section className="border-y border-line bg-paper py-20"><div className="container-shell"><div className="flex items-end justify-between"><div><p className="eyebrow text-wine">Selected work</p><h2 className="mt-2 font-display text-4xl">The atelier portfolio</h2></div><span className="hidden text-xs text-muted sm:block">Portfolio reviewed by StitchLink</span></div><div className="mt-7 grid grid-cols-2 gap-4 lg:grid-cols-4">{["31% center","57% center","75% center","92% center"].map((position,index)=><div key={position} className={`relative overflow-hidden rounded-2xl bg-[#ded0bf] ${index===0?"col-span-2 row-span-2 aspect-square":"aspect-square"}`}><Image src="/stitchlink-hero.png" alt={`Portfolio look ${index+1}`} fill sizes="(max-width: 1024px) 50vw, 25vw" className="object-cover transition duration-700 hover:scale-105" style={{objectPosition:position}} /></div>)}</div></div></section>
       <section className="container-shell grid gap-8 py-20 lg:grid-cols-2"><div><p className="eyebrow text-wine">What working together feels like</p><h2 className="mt-2 font-display text-4xl">Clear expectations, from first sketch to final stitch.</h2><div className="mt-7 space-y-4">{[[Scissors,"A deliberate process","Every milestone includes a note or image, so you always know where your piece stands."],[ShieldCheck,"Protected funds","Your payment becomes payable only after delivery approval or the protection window closes."],[Check,"Capacity you can trust",`Grade ${tailor.grade} limits this atelier to ${tailor.capacity} active commissions.`]].map(([Icon,title,body])=>{const InfoIcon=Icon as typeof Scissors;return <div key={title as string} className="flex gap-4 rounded-2xl border border-line bg-paper p-5"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#f0e2d0] text-wine"><InfoIcon size={18} /></span><div><h3 className="font-semibold">{title as string}</h3><p className="mt-1 text-sm leading-6 text-muted">{body as string}</p></div></div>})}</div></div><div className="rounded-[2rem] bg-background p-7 sm:p-10"><div className="flex gap-1 text-gold">{Array.from({length:5}).map((_,i)=><Star key={i} size={15} className="fill-current" />)}</div><blockquote className="mt-5 font-display text-3xl leading-tight">“The updates were so thoughtful that I never felt the distance. The piece arrived exactly as we agreed — and somehow felt even more special in person.”</blockquote><p className="mt-7 text-sm font-semibold">Chioma E. <span className="font-normal text-muted">· New York, USA</span></p></div></section>
       <section className="container-shell pb-20"><div className="rounded-[2rem] bg-wine px-6 py-14 text-center text-white"><p className="eyebrow text-[#e3c59b]">Begin a conversation</p><h2 className="mx-auto mt-3 max-w-2xl font-display text-4xl">Have something in mind for {tailor.studio}?</h2><ButtonLink href={`/request?tailor=${tailor.slug}`} className="mt-6 bg-white text-ink hover:bg-[#f5ede2]">Request a custom quote</ButtonLink></div></section>

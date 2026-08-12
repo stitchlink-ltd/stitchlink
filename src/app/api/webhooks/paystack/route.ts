@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { dispatchNotification } from "@/lib/notification-dispatch";
 import { verifyPaystackSignature, verifyPaystackTransaction } from "@/lib/paystack";
 import { enforceRateLimit, requestIdentifier } from "@/lib/rate-limit";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -22,6 +23,9 @@ export async function POST(request:Request){
     if(verified.status!=="success"||verified.currency!=="NGN"||verified.amount!==parsed.data.data.amount)return new Response("Verification mismatch",{status:409});
     const {error}=await admin.rpc("record_successful_payment",{p_reference:verified.reference,p_amount_kobo:verified.amount,p_provider_fee_kobo:verified.fees??0,p_paid_at:verified.paid_at,p_event_key:eventKey});
     if(error)return new Response("Ledger update failed",{status:500});
+    const {data:payment}=await admin.from("payments").select("order_id").eq("reference",verified.reference).single();
+    const {data:order}=payment?await admin.from("orders").select("customer_id").eq("id",payment.order_id).single():{data:null};
+    if(order)dispatchNotification({userId:order.customer_id,title:"Payment confirmed",body:"Your full payment has been recorded in exact NGN.",href:"/customer/payments"});
   }
   return new Response("OK");
 }

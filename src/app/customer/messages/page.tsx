@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Send } from "lucide-react";
 import { SectionPlaceholder } from "@/components/section-placeholder";
+import { tailors } from "@/lib/demo-data";
 import { threads, useMessages } from "@/lib/mock-messages";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +13,7 @@ export default function MessagesPage() {
   const [draft, setDraft] = useState("");
   const activeThread = threads.find((thread) => thread.id === activeThreadId)!;
   const threadMessages = messages.filter((message) => message.threadId === activeThreadId);
+  const activeTailor = tailors.find((tailor) => tailor.slug === activeThread.id);
 
   function send() {
     if (!draft.trim()) return;
@@ -47,7 +50,13 @@ export default function MessagesPage() {
         </div>
         <div className="flex flex-col">
           <div className="border-b border-line pb-4">
-            <p className="font-semibold">{activeThread.name}</p>
+            {activeTailor ? (
+              <Link href={`/tailors/${activeTailor.slug}`} className="font-semibold hover:underline">
+                {activeThread.name}
+              </Link>
+            ) : (
+              <p className="font-semibold">{activeThread.name}</p>
+            )}
             {activeThread.subtitle && <p className="text-[11px] text-sage">Active now · {activeThread.subtitle}</p>}
           </div>
           <div className="flex-1 space-y-3 overflow-y-auto py-5">

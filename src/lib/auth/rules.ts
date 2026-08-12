@@ -5,6 +5,8 @@ export const oauthCookieNames = { role: "stitchlink_oauth_role", next: "stitchli
 export const demoRoleCookieName = "stitchlink_demo_role";
 export type PublicRole = (typeof publicRoles)[number];
 export type AppRole = PublicRole | "admin";
+export const demoRoles: AppRole[] = ["customer", "tailor", "admin"];
+export const demoDisplayNames: Record<AppRole, string> = { customer: "Nneka Okafor", tailor: "Kola Adeyemi", admin: "Dami Bello" };
 
 const password = z
   .string()

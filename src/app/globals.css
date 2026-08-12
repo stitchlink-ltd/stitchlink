@@ -12,20 +12,24 @@
   --wine-dark: #43131c;
   --gold: #b68a50;
   --sage: #31594a;
+  --blue: #4f6bed;
+  --stripe-line: rgba(23, 17, 12, .08);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --background: #151210;
+  --background: #17181a;
   --foreground: #f6eee7;
-  --paper: #211b18;
+  --paper: #1c1d1f;
   --ink: #17110f;
   --muted: #c2b5ab;
-  --line: #4d4039;
+  --line: #313234;
   --wine: #ad4455;
   --wine-dark: #7b2937;
   --gold: #d7ad72;
   --sage: #5d987f;
+  --blue: #7c94f5;
+  --stripe-line: rgba(255, 255, 255, .08);
 }
 
 @theme inline {
@@ -39,6 +43,7 @@
   --color-wine-dark: var(--wine-dark);
   --color-gold: var(--gold);
   --color-sage: var(--sage);
+  --color-blue: var(--blue);
   --font-sans: "Avenir Next", Avenir, "Segoe UI", sans-serif;
   --font-display: "Iowan Old Style", Baskerville, "Times New Roman", serif;
 }
@@ -74,6 +79,10 @@ input, select, textarea { color: inherit; }
 .paper-grid {
   background-image: linear-gradient(rgba(104,31,44,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(104,31,44,.045) 1px, transparent 1px);
   background-size: 32px 32px;
+}
+
+.diagonal-stripes {
+  background-image: repeating-linear-gradient(135deg, var(--stripe-line) 0 1px, transparent 1px 11px);
 }
 
 .soft-shadow { box-shadow: 0 20px 65px rgba(58, 35, 25, .10); }

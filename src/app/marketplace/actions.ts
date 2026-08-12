@@ -4,7 +4,9 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAccount, requireRole } from "@/data/auth";
+import { scheduleOrderMilestoneSync } from "@/lib/calendar-sync";
 import { env } from "@/lib/env";
+import { dispatchNotification } from "@/lib/notification-dispatch";
 import { sendMarketplaceEmail } from "@/lib/notifications";
 import { initializePaystackTransaction } from "@/lib/paystack";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -53,6 +55,7 @@ export async function submitRequest(_state: MarketplaceActionState, formData: Fo
     const supabase = await currentSupabase();
     const { error } = await supabase.rpc("submit_request", { p_tailor_id: parsed.data.tailorId, p_garment_type: parsed.data.garmentType, p_description: parsed.data.description, p_has_fabric: parsed.data.hasFabric, p_needed_by: parsed.data.neededBy.toISOString().slice(0,10), p_budget_kobo: ngnToKobo(parsed.data.budgetNgn), p_measurement_method: parsed.data.measurementMethod, p_delivery_preference: parsed.data.deliveryPreference, p_images: parsed.data.images });
     if (error) throw new Error(error.message);
+    dispatchNotification({ userId: parsed.data.tailorId, title: "New custom request", body: `${parsed.data.garmentType} request awaiting your quote`, href: "/tailor/quotes" });
     revalidatePath("/customer"); revalidatePath("/tailor/quotes");
     return { status: "success", message: "Your request is with the selected tailor." };
   } catch (error) { return errorState(error); }
@@ -83,6 +86,8 @@ export async function sendQuote(_state: MarketplaceActionState, formData: FormDa
     const supabase = await currentSupabase();
     const { error } = await supabase.rpc("send_quote", { p_request_id: parsed.data.requestId, p_tailoring_kobo: ngnToKobo(parsed.data.tailoringNgn), p_delivery_kobo: ngnToKobo(parsed.data.deliveryNgn), p_scope: parsed.data.scope, p_due_date: parsed.data.dueDate.toISOString().slice(0,10), p_expires_at: parsed.data.expiresAt.toISOString() });
     if (error) throw new Error(error.message);
+    const { data: request } = await supabase.from("custom_requests").select("customer_id").eq("id", parsed.data.requestId).single();
+    if (request) dispatchNotification({ userId: request.customer_id, title: "Your tailor sent a quote", body: "Review the latest structured quote before it expires.", href: "/customer/orders" });
     revalidatePath("/tailor/quotes"); revalidatePath("/customer");
     return { status: "success", message: "Quote sent to the customer." };
   } catch (error) { return errorState(error); }
@@ -92,33 +97,71 @@ export async function acceptQuote(quoteId: string): Promise<MarketplaceActionSta
   try {
     const account = await requireRole("customer"); if ("demo" in account) return { status: "success" };
     const supabase = await currentSupabase();
-    const { error } = await supabase.rpc("accept_quote_and_reserve", { p_quote_id: quoteId });
+    const { data: orderId, error } = await supabase.rpc("accept_quote_and_reserve", { p_quote_id: quoteId });
     if (error) throw new Error(error.message);
+    if (orderId) scheduleOrderMilestoneSync(orderId, "due_date");
     revalidatePath("/customer"); revalidatePath("/customer/orders"); revalidatePath("/tailor/jobs");
-    return { status: "success", message: "Quote accepted. Pay the deposit to activate your order." };
+    return { status: "success", message: "Quote accepted. Pay in full to activate your order." };
   } catch (error) { return errorState(error); }
 }
 
 export async function addProgress(_state: MarketplaceActionState, formData: FormData): Promise<MarketplaceActionState> {
   const parsed = progressSchema.safeParse({ orderId: formData.get("orderId"), stage: formData.get("stage"), note: formData.get("note"), imagePaths: jsonImages(formData.get("imagePaths")) });
   if (!parsed.success) return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
-  try { const account=await requireRole("tailor");if("demo" in account)return{status:"success"};const supabase=await currentSupabase();const{error}=await supabase.rpc("add_progress_update",{p_order_id:parsed.data.orderId,p_stage:parsed.data.stage,p_note:parsed.data.note,p_image_paths:parsed.data.imagePaths});if(error)throw new Error(error.message);revalidatePath("/tailor/jobs");revalidatePath("/customer/orders");return{status:"success",message:"Customer update posted."}; } catch(error){return errorState(error);}
+  try {
+    const account=await requireRole("tailor");if("demo" in account)return{status:"success"};
+    const supabase=await currentSupabase();
+    const{error}=await supabase.rpc("add_progress_update",{p_order_id:parsed.data.orderId,p_stage:parsed.data.stage,p_note:parsed.data.note,p_image_paths:parsed.data.imagePaths});
+    if(error)throw new Error(error.message);
+    const{data:order}=await supabase.from("orders").select("customer_id").eq("id",parsed.data.orderId).single();
+    if(order)dispatchNotification({userId:order.customer_id,title:"Your order has a new update",body:parsed.data.note,href:`/customer/orders/${parsed.data.orderId}`});
+    revalidatePath("/tailor/jobs");revalidatePath("/customer/orders");
+    return{status:"success",message:"Customer update posted."};
+  } catch(error){return errorState(error);}
 }
 
 export async function recordShipment(_state: MarketplaceActionState, formData: FormData): Promise<MarketplaceActionState> {
   const parsed = shipmentSchema.safeParse({ orderId: formData.get("orderId"), method: formData.get("method"), carrier: formData.get("carrier"), trackingReference: formData.get("trackingReference") });
   if (!parsed.success) return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
-  try { const account=await requireRole("tailor");if("demo" in account)return{status:"success"};const supabase=await currentSupabase();const{error}=await supabase.rpc("record_shipment",{p_order_id:parsed.data.orderId,p_method:parsed.data.method,p_carrier:parsed.data.carrier,p_tracking_reference:parsed.data.trackingReference});if(error)throw new Error(error.message);revalidatePath("/tailor/jobs");revalidatePath("/customer/orders");return{status:"success",message:"Shipment recorded."}; } catch(error){return errorState(error);}
+  try {
+    const account=await requireRole("tailor");if("demo" in account)return{status:"success"};
+    const supabase=await currentSupabase();
+    const{error}=await supabase.rpc("record_shipment",{p_order_id:parsed.data.orderId,p_method:parsed.data.method,p_carrier:parsed.data.carrier,p_tracking_reference:parsed.data.trackingReference});
+    if(error)throw new Error(error.message);
+    scheduleOrderMilestoneSync(parsed.data.orderId,"delivery_reminder");
+    const{data:order}=await supabase.from("orders").select("customer_id").eq("id",parsed.data.orderId).single();
+    if(order)dispatchNotification({userId:order.customer_id,title:"Your order is on its way",body:parsed.data.trackingReference||"Your tailor marked this order as shipped.",href:`/customer/orders/${parsed.data.orderId}`});
+    revalidatePath("/tailor/jobs");revalidatePath("/customer/orders");
+    return{status:"success",message:"Shipment recorded."};
+  } catch(error){return errorState(error);}
 }
 
 export async function confirmDelivery(orderId: string): Promise<MarketplaceActionState> {
-  try { const account=await requireRole("customer");if("demo" in account)return{status:"success"};const supabase=await currentSupabase();const{error}=await supabase.rpc("confirm_delivery",{p_order_id:orderId});if(error)throw new Error(error.message);revalidatePath("/customer/orders");revalidatePath("/tailor/earnings");return{status:"success",message:"Delivery confirmed. Thank you."}; } catch(error){return errorState(error);}
+  try {
+    const account=await requireRole("customer");if("demo" in account)return{status:"success"};
+    const supabase=await currentSupabase();
+    const{error}=await supabase.rpc("confirm_delivery",{p_order_id:orderId});
+    if(error)throw new Error(error.message);
+    const{data:order}=await supabase.from("orders").select("tailor_id").eq("id",orderId).single();
+    if(order)dispatchNotification({userId:order.tailor_id,title:"Customer confirmed delivery",body:"Your payout will become eligible after marketplace review.",href:"/tailor/earnings"});
+    revalidatePath("/customer/orders");revalidatePath("/tailor/earnings");
+    return{status:"success",message:"Delivery confirmed. Thank you."};
+  } catch(error){return errorState(error);}
 }
 
 export async function openDispute(_state: MarketplaceActionState, formData: FormData): Promise<MarketplaceActionState> {
   const parsed=disputeSchema.safeParse({orderId:formData.get("orderId"),reason:formData.get("reason"),description:formData.get("description"),evidencePaths:jsonImages(formData.get("evidencePaths"))});
   if(!parsed.success)return{status:"error",fieldErrors:parsed.error.flatten().fieldErrors};
-  try { const account=await requireRole("customer");if("demo" in account)return{status:"success"};const supabase=await currentSupabase();const{error}=await supabase.rpc("open_customer_dispute",{p_order_id:parsed.data.orderId,p_reason:parsed.data.reason,p_description:parsed.data.description,p_evidence_paths:parsed.data.evidencePaths});if(error)throw new Error(error.message);revalidatePath("/customer/orders");revalidatePath("/admin/disputes");return{status:"success",message:"Your dispute has been opened."}; } catch(error){return errorState(error);}
+  try {
+    const account=await requireRole("customer");if("demo" in account)return{status:"success"};
+    const supabase=await currentSupabase();
+    const{error}=await supabase.rpc("open_customer_dispute",{p_order_id:parsed.data.orderId,p_reason:parsed.data.reason,p_description:parsed.data.description,p_evidence_paths:parsed.data.evidencePaths});
+    if(error)throw new Error(error.message);
+    const{data:order}=await supabase.from("orders").select("tailor_id").eq("id",parsed.data.orderId).single();
+    if(order)dispatchNotification({userId:order.tailor_id,title:"A customer opened a dispute",body:"Marketplace staff will review the case before any payout is released.",href:"/tailor/jobs"});
+    revalidatePath("/customer/orders");revalidatePath("/admin/disputes");
+    return{status:"success",message:"Your dispute has been opened."};
+  } catch(error){return errorState(error);}
 }
 
 export async function createBalanceLink(orderId: string): Promise<MarketplaceActionState> {
@@ -143,6 +186,15 @@ export async function reviewApplication(applicationId: string, approved: boolean
     const supabase = await currentSupabase();
     const { error } = await supabase.rpc("admin_review_application", { p_application_id: applicationId, p_approved: approved, p_reason: reason });
     if (error) throw new Error(error.message);
+    const { data: application } = await supabase.from("tailor_applications").select("tailor_id").eq("id", applicationId).single();
+    if (application) {
+      dispatchNotification({
+        userId: application.tailor_id,
+        title: approved ? "Your atelier is verified" : "Your verification needs attention",
+        body: reason || (approved ? "Your profile is now visible to customers." : "Review the decision notes and contact support."),
+        href: "/tailor/verification",
+      });
+    }
     revalidatePath("/admin/verification");
     revalidatePath("/tailors");
     revalidatePath("/tailors/[slug]", "page");

@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const variants = {
-  primary: "bg-wine text-white hover:bg-wine-dark border-gray-200",
+  primary: "bg-wine/10 text-wine hover:bg-wine/15 border-wine/20",
   secondary: "bg-paper text-foreground hover:bg-background border-line",
   dark: "bg-ink text-white hover:bg-black border-ink",
   ghost: "bg-transparent text-foreground hover:bg-black/5 border-transparent",

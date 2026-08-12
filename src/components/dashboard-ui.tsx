@@ -60,18 +60,21 @@ export function StatusPill({
   tone?: "gold" | "green" | "wine" | "gray";
 }) {
   const colors = {
-    gold: "bg-[#f4e8d5] text-[#755322]",
-    green: "bg-[#e3eee8] text-sage",
-    wine: "bg-wine/10 text-wine",
-    gray: "bg-[#eeeae4] text-muted",
+    gold: { bg: "bg-blue/10", text: "text-blue", dot: "bg-blue", border: "border-blue/25" },
+    green: { bg: "bg-sage/10", text: "text-sage", dot: "bg-sage", border: "border-sage/25" },
+    wine: { bg: "bg-wine/10", text: "text-wine", dot: "bg-wine", border: "border-wine/25" },
+    gray: { bg: "bg-muted/10", text: "text-muted", dot: "bg-muted", border: "border-muted/25" },
   };
   return (
     <span
       className={cn(
-        "inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider",
-        colors[tone]
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider",
+        colors[tone].bg,
+        colors[tone].text,
+        colors[tone].border
       )}
     >
+      <span aria-hidden="true" className={cn("size-1.5 rounded-full", colors[tone].dot)} />
       {children}
     </span>
   );

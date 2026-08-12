@@ -1,8 +1,14 @@
 import "server-only";
 
+import { isDemoModeEnabled } from "@/lib/auth/rules";
+import { tailors as demoTailors } from "@/lib/demo-data";
 import { capacityForGrade } from "@/lib/grading";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Tailor } from "@/lib/types";
+
+function demoModeActive() {
+  return isDemoModeEnabled(process.env.NODE_ENV, process.env.DEMO_MODE);
+}
 
 export type PublishedTailor = { id: string; slug: string; studioName: string; city: string; state: string; specialties: string[]; grade: number; startingPriceKobo: number; activeJobs: number; capacity: number };
 
@@ -48,16 +54,19 @@ function mapTailorRow(row: Record<string, unknown>): Tailor {
 
 export async function getPublishedTailorDirectory(): Promise<Tailor[]> {
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return [];
+  if (!supabase) return demoModeActive() ? demoTailors : [];
   const { data } = await supabase.from("tailor_profiles").select(tailorDirectoryColumns).eq("published", true).eq("verification_status", "approved").order("studio_name");
-  return ((data ?? []) as Array<Record<string, unknown>>).map(mapTailorRow);
+  const rows = ((data ?? []) as Array<Record<string, unknown>>).map(mapTailorRow);
+  if (rows.length === 0 && demoModeActive()) return demoTailors;
+  return rows;
 }
 
 export async function getPublishedTailorProfile(slug: string): Promise<Tailor | null> {
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return null;
+  if (!supabase) return demoModeActive() ? (demoTailors.find((tailor) => tailor.slug === slug) ?? null) : null;
   const { data } = await supabase.from("tailor_profiles").select(tailorDirectoryColumns).eq("published", true).eq("verification_status", "approved").eq("slug", slug).maybeSingle();
-  return data ? mapTailorRow(data as Record<string, unknown>) : null;
+  if (data) return mapTailorRow(data as Record<string, unknown>);
+  return demoModeActive() ? (demoTailors.find((tailor) => tailor.slug === slug) ?? null) : null;
 }
 
 export type MarketplaceOrder = { id: string; reference: string; tailorId: string; title: string; status: string; stage: string; totalKobo: number; dueDate: string; depositPaidAt: string | null; balancePaidAt: string | null };

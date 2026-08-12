@@ -1,7 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { demoRoleCookieName, isDemoModeEnabled, type AppRole } from "@/lib/auth/rules";
-
-const demoRoles: AppRole[] = ["customer", "tailor", "admin"];
+import { demoRoleCookieName, demoRoles, isDemoModeEnabled, type AppRole } from "@/lib/auth/rules";
 
 export function GET(request: NextRequest) {
   if (!isDemoModeEnabled(process.env.NODE_ENV, process.env.DEMO_MODE)) {

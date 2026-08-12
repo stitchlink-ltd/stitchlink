@@ -60,3 +60,19 @@ export type QuoteBreakdown = {
   refundsKobo?: number;
   adjustmentsKobo?: number;
 };
+
+export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "rescheduled";
+
+export type Appointment = {
+  id: string;
+  requestId: string | null;
+  orderId: string | null;
+  customerId: string;
+  customerName: string;
+  tailorId: string;
+  tailorName: string;
+  startsAt: string;
+  endsAt: string;
+  meetingUrl: string | null;
+  status: AppointmentStatus;
+};

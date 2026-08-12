@@ -24,8 +24,7 @@ export default function Home() {
       <section className="relative min-h-[720px] overflow-hidden bg-ink text-white lg:min-h-[760px]">
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/stitchlink-hero.png')" }}
+          className="absolute inset-0 bg-[url('/stitchlink-hero.png')] bg-cover bg-center"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#241715]/95 via-[#301b19]/55 to-black/5" />
         <div className="absolute inset-x-0 top-0 border-b border-white/15 bg-black/15 py-2 text-center text-[10px] font-semibold uppercase tracking-[.18em] text-white/75 backdrop-blur-sm sm:text-xs">
@@ -87,7 +86,7 @@ export default function Home() {
         <div className="container-shell -translate-y-4 rounded-lg border border-line bg-paper p-3 soft-shadow">
           <form action="/tailors" className="grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
             <label className="flex items-center gap-3 rounded-lg px-4 py-3 hover:bg-background">
-              <Search size={18} className="text-wine" />
+              <Search size={18} className="text-blue" />
               <span>
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-muted">
                   I&apos;m looking for
@@ -113,7 +112,7 @@ export default function Home() {
               </span>
             </label> */}
             <label className="flex items-center gap-3 rounded-xl px-4 py-3 hover:bg-background">
-              <CalendarClock size={18} className="text-wine" />
+              <CalendarClock size={18} className="text-blue" />
               <span>
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-muted">
                   Needed by
@@ -138,7 +137,7 @@ export default function Home() {
             ["96%", "delivered on time"],
           ].map(([value, label]) => (
             <div key={label}>
-              <p className="font-display text-3xl font-semibold text-wine">{value}</p>
+              <p className="font-display text-3xl font-semibold text-blue">{value}</p>
               <p className="mt-1 text-xs uppercase tracking-wider text-muted">{label}</p>
             </div>
           ))}
@@ -217,7 +216,7 @@ export default function Home() {
                       <h3 className="font-display text-2xl font-semibold">{title as string}</h3>
                       <p className="mt-1 text-sm leading-6 text-muted">{body as string}</p>
                     </div>
-                    <span className="grid size-11 place-items-center rounded-full bg-[#f0e2d0] text-wine">
+                    <span className="grid size-11 place-items-center rounded-full bg-blue/10 text-blue">
                       <StepIcon size={20} />
                     </span>
                   </article>
@@ -228,8 +227,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="why" className="overflow-hidden bg-wine-dark py-24 text-white">
-        <div className="container-shell grid gap-12 lg:grid-cols-2 lg:items-center">
+      <section id="why" className="relative overflow-hidden bg-background py-24 text-foreground">
+        <div aria-hidden="true" className="absolute inset-0 diagonal-stripes opacity-70" />
+        <div className="container-shell relative grid gap-12 lg:grid-cols-2 lg:items-center">
           <div>
             <p className="eyebrow text-[#d8b17e]">Designed for distance</p>
             <h2 className="mt-3 max-w-xl font-display text-5xl leading-[1.02]">
@@ -237,14 +237,14 @@ export default function Home() {
               <br />
               Stay close to the craft.
             </h2>
-            <p className="mt-6 max-w-lg leading-7 text-white/65">
+            <p className="mt-6 max-w-lg leading-7 text-foreground/65">
               See an estimated USD price while every quote, payment and refund remains exact in
               naira. Your card issuer handles conversion; StitchLink keeps the work and the money
               trail clear.
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {[
-                [CreditCard, "50/50 protected payments"],
+                [CreditCard, "Full payment, 50/50 tailor release"],
                 [ShieldCheck, "Dispute protection"],
                 [Globe2, "International cards"],
                 [WandSparkles, "Concept try-on previews"],
@@ -253,7 +253,7 @@ export default function Home() {
                 return (
                   <div
                     key={label as string}
-                    className="flex items-center gap-3 rounded-xl border border-white/15 p-4 text-sm"
+                    className="flex items-center gap-3 rounded-xl border border-foreground/15 p-4 text-sm"
                   >
                     <FeatureIcon size={18} className="text-[#d8b17e]" />
                     {label as string}
@@ -262,10 +262,10 @@ export default function Home() {
               })}
             </div>
           </div>
-          <div className="relative rounded-[2rem] border border-white/15 bg-white/7 p-6 sm:p-9">
-            <div className="flex items-center justify-between border-b border-white/15 pb-5">
+          <div className="relative rounded-[2rem] border border-foreground/15 bg-foreground/7 p-6 sm:p-9">
+            <div className="flex items-center justify-between border-b border-foreground/15 pb-5">
               <div>
-                <p className="text-xs text-white/50">Custom order</p>
+                <p className="text-xs text-foreground/50">Custom order</p>
                 <p className="mt-1 font-display text-2xl">Hand-embroidered agbada</p>
               </div>
               <span className="rounded-full bg-[#d8b17e] px-3 py-1 text-xs font-bold text-ink">
@@ -274,24 +274,24 @@ export default function Home() {
             </div>
             <div className="space-y-4 py-6 text-sm">
               <div className="flex justify-between">
-                <span className="text-white/55">Tailoring</span>
+                <span className="text-foreground/55">Tailoring</span>
                 <span>₦240,000</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/55">Estimated display</span>
+                <span className="text-foreground/55">Estimated display</span>
                 <span>≈ $150.00 USD</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/55">Deposit due today</span>
-                <span>₦120,000</span>
+                <span className="text-foreground/55">Full payment due today</span>
+                <span>₦240,000</span>
               </div>
             </div>
-            <div className="rounded-xl bg-white/10 p-4 text-xs leading-5 text-white/60">
-              Your checkout charge is exactly ₦120,000. Your bank determines the final amount shown
-              in USD and may add conversion fees.
+            <div className="rounded-xl bg-foreground/10 p-4 text-xs leading-5 text-foreground/60">
+              Your checkout charge is exactly ₦240,000. The tailor&apos;s net payout is released 50% to
+              begin and 50% after you confirm delivery.
             </div>
             <button className="mt-5 w-full rounded-full bg-[#f1ddbf] py-3 text-sm font-bold text-ink">
-              Accept quote & pay deposit
+              Accept quote & pay in full
             </button>
           </div>
         </div>
@@ -328,7 +328,7 @@ export default function Home() {
       </section>
 
       <section className="container-shell pb-24">
-        <div className="relative overflow-hidden rounded-[2rem] bg-[#d8b17e] px-6 py-16 text-center sm:px-12">
+        <div className="relative overflow-hidden rounded-[2rem] bg-[#d8b17e] px-6 py-16 text-center text-ink sm:px-12">
           <div className="absolute -left-16 -top-16 size-52 rounded-full border border-ink/10" />
           <div className="absolute -bottom-24 -right-16 size-72 rounded-full border border-ink/10" />
           <p className="eyebrow">Your piece starts with a conversation</p>

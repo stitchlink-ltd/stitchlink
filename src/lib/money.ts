@@ -33,7 +33,7 @@ export function calculateTailorPayable(input: QuoteBreakdown) {
   );
 }
 
-export function splitInstallments(totalKobo: number) {
-  const depositKobo = Math.floor(totalKobo / 2);
-  return { depositKobo, balanceKobo: totalKobo - depositKobo };
+export function splitTailorRelease(tailorPayableKobo: number) {
+  const initialKobo = Math.floor(tailorPayableKobo / 2);
+  return { initialKobo, finalKobo: tailorPayableKobo - initialKobo };
 }

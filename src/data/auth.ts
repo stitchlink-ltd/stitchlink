@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { demoRoleCookieName, isDemoModeEnabled, roleHome, sanitizeNextPath, type AppRole } from "@/lib/auth/rules";
+import { demoDisplayNames, demoRoleCookieName, demoRoles, isDemoModeEnabled, roleHome, sanitizeNextPath, type AppRole } from "@/lib/auth/rules";
 
 export type CurrentAccount = {
   user: User;
@@ -57,15 +57,13 @@ export async function requireRole(expected: AppRole) {
   const demoMode = isDemoModeEnabled(process.env.NODE_ENV, process.env.DEMO_MODE);
   const cookieStore = await cookies();
   if (demoMode && cookieStore.get(demoRoleCookieName)?.value === expected) {
-    const labels = { customer: "Nneka Okafor", tailor: "Kola Adeyemi", admin: "Dami Bello" };
-    return { demo: true as const, role: expected, displayName: labels[expected], tailorOnboarded: true };
+    return { demo: true as const, role: expected, displayName: demoDisplayNames[expected], tailorOnboarded: true };
   }
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
     if (demoMode) {
-      const labels = { customer: "Nneka Okafor", tailor: "Kola Adeyemi", admin: "Dami Bello" };
-      return { demo: true as const, role: expected, displayName: labels[expected], tailorOnboarded: true };
+      return { demo: true as const, role: expected, displayName: demoDisplayNames[expected], tailorOnboarded: true };
     }
     redirect("/sign-in?error=configuration");
   }
@@ -77,4 +75,16 @@ export async function requireRole(expected: AppRole) {
     if (error || data.currentLevel !== "aal2") redirect("/mfa");
   }
   return account;
+}
+
+export async function requireAccountOrDemo() {
+  const demoMode = isDemoModeEnabled(process.env.NODE_ENV, process.env.DEMO_MODE);
+  if (demoMode) {
+    const cookieStore = await cookies();
+    const demoRole = cookieStore.get(demoRoleCookieName)?.value as AppRole | undefined;
+    if (demoRole && demoRoles.includes(demoRole)) {
+      return { demo: true as const, role: demoRole, displayName: demoDisplayNames[demoRole], tailorOnboarded: true };
+    }
+  }
+  return requireAccount();
 }

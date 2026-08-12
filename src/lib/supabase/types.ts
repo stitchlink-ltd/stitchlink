@@ -10,7 +10,7 @@ export type Database = {
       verification_status: "draft" | "submitted" | "in_review" | "approved" | "rejected" | "expired";
       request_status: "draft" | "submitted" | "negotiating" | "quoted" | "accepted" | "expired" | "declined" | "cancelled";
       quote_status: "draft" | "sent" | "superseded" | "accepted" | "declined" | "expired";
-      order_status: "pending_deposit" | "active" | "awaiting_balance" | "ready" | "shipped" | "delivered" | "disputed" | "completed" | "cancelled";
+      order_status: "pending_payment" | "pending_deposit" | "active" | "awaiting_balance" | "ready" | "shipped" | "delivered" | "disputed" | "completed" | "cancelled";
     };
     CompositeTypes: Record<string, never>;
   };
