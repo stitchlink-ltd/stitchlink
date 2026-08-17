@@ -11,9 +11,7 @@ import { sendMarketplaceEmail } from "@/lib/notifications";
 import { initializePaystackTransaction } from "@/lib/paystack";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-export type MarketplaceActionState = { status: "idle" | "success" | "error"; message?: string; fieldErrors?: Record<string, string[]> };
-export const marketplaceInitialState: MarketplaceActionState = { status: "idle" };
+import type { MarketplaceActionState } from "@/lib/marketplace-state";
 
 const imageSchema = z.object({ path: z.string().max(500), mimeType: z.enum(["image/jpeg","image/png","image/webp"]), sizeBytes: z.number().int().positive().max(10 * 1024 * 1024) });
 const requestSchema = z.object({ tailorId: z.uuid(), garmentType: z.string().trim().min(2).max(80), description: z.string().trim().min(10).max(4000), hasFabric: z.boolean(), neededBy: z.coerce.date(), budgetNgn: z.coerce.number().finite().min(50000).max(100000000), measurementMethod: z.enum(["profile","call","later"]), deliveryPreference: z.enum(["shipping","pickup","decide_later"]), images: z.array(imageSchema).max(5) });
@@ -69,11 +67,18 @@ export async function sendMessage(_state: MarketplaceActionState, formData: Form
     if (account.role !== "customer" && account.role !== "tailor") throw new Error("Only marketplace members can send messages.");
     if ("demo" in account) return { status: "success" };
     const supabase = await currentSupabase();
+    // Only email on the first message of a burst -- if the conversation already had
+    // activity in the last 15 minutes, assume recipients were already emailed for it
+    // (they'll see the rest live in-app) rather than emailing on every single line.
+    const throttleSince = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const { data: recentActivity } = await supabase.from("messages").select("id").eq("conversation_id",parsed.data.conversationId).gte("created_at",throttleSince).limit(1).maybeSingle();
     const { error } = await supabase.from("messages").insert({ conversation_id: parsed.data.conversationId, sender_id: account.user.id, body: parsed.data.body, attachment_paths: parsed.data.attachments });
     if (error) throw new Error(error.message);
-    const { data: members } = await supabase.from("conversation_members").select("user_id").eq("conversation_id",parsed.data.conversationId).neq("user_id",account.user.id);
-    for (const member of (members ?? []) as Array<{ user_id: string }>) await sendMarketplaceEmail({ to: await recipientEmail(member.user_id), subject: "New StitchLink message", text: `${account.displayName}: ${parsed.data.body}` });
-    revalidatePath("/customer/messages"); revalidatePath("/tailor/quotes");
+    if (!recentActivity) {
+      const { data: members } = await supabase.from("conversation_members").select("user_id").eq("conversation_id",parsed.data.conversationId).neq("user_id",account.user.id);
+      for (const member of (members ?? []) as Array<{ user_id: string }>) await sendMarketplaceEmail({ to: await recipientEmail(member.user_id), subject: "New StitchLink message", text: `${account.displayName}: ${parsed.data.body}` });
+    }
+    revalidatePath("/customer/messages"); revalidatePath("/customer/requests"); revalidatePath("/tailor/quotes"); revalidatePath("/tailor/messages"); revalidatePath("/admin/messages");
     return { status: "success" };
   } catch (error) { return errorState(error); }
 }
@@ -117,6 +122,21 @@ export async function addProgress(_state: MarketplaceActionState, formData: Form
     if(order)dispatchNotification({userId:order.customer_id,title:"Your order has a new update",body:parsed.data.note,href:`/customer/orders/${parsed.data.orderId}`});
     revalidatePath("/tailor/jobs");revalidatePath("/customer/orders");
     return{status:"success",message:"Customer update posted."};
+  } catch(error){return errorState(error);}
+}
+
+export async function setTryOnReady(orderId: string, ready: boolean): Promise<MarketplaceActionState> {
+  try {
+    const account=await requireRole("tailor");if("demo" in account)return{status:"success"};
+    const supabase=await currentSupabase();
+    const{error}=await supabase.rpc("set_try_on_ready",{p_order_id:orderId,p_ready:ready});
+    if(error)throw new Error(error.message);
+    if(ready){
+      const{data:order}=await supabase.from("orders").select("customer_id").eq("id",orderId).single();
+      if(order)dispatchNotification({userId:order.customer_id,title:"Try it on is ready",body:"Your tailor marked this order ready for a virtual try-on preview.",href:`/customer/orders/${orderId}`});
+    }
+    revalidatePath("/tailor/jobs");revalidatePath("/customer/orders");
+    return{status:"success",message:ready?"Marked ready for try-on.":"Try-on preview disabled for this order."};
   } catch(error){return errorState(error);}
 }
 
@@ -199,6 +219,23 @@ export async function reviewApplication(applicationId: string, approved: boolean
     revalidatePath("/tailors");
     revalidatePath("/tailors/[slug]", "page");
     return { status: "success", message: approved ? "Tailor approved and published." : "Application rejected." };
+  } catch (error) { return errorState(error); }
+}
+
+export async function updateAccountStatus(userId: string, role: "customer" | "tailor" | "admin", accountStatus: "active" | "suspended", reason = ""): Promise<MarketplaceActionState> {
+  try {
+    const account = await requireRole("admin");
+    if ("demo" in account) return { status: "success", message: accountStatus === "suspended" ? "Demo: account suspended." : "Demo: account reactivated." };
+    const supabase = await currentSupabase();
+    const { error } = await supabase.rpc("admin_change_profile", { p_user_id: userId, p_role: role, p_account_status: accountStatus, p_reason: reason });
+    if (error) throw new Error(error.message);
+    if (accountStatus === "suspended") {
+      dispatchNotification({ userId, title: "Your account has been suspended", body: reason || "Contact support for more information.", href: "/account" });
+    }
+    revalidatePath("/admin/users");
+    revalidatePath("/tailors");
+    revalidatePath("/tailors/[slug]", "page");
+    return { status: "success", message: accountStatus === "suspended" ? "Account suspended." : "Account reactivated." };
   } catch (error) { return errorState(error); }
 }
 

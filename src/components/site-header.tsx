@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import type { PublicNavAccount } from "@/lib/use-public-account";
 import { Logo } from "./logo";
 import { CurrencySwitcher } from "./price";
 import { ThemeToggle } from "./theme-toggle";
@@ -13,7 +14,15 @@ export const publicNavLinks = [
   ["Why StitchLink", "/#why"],
 ] as const;
 
-export function SiteHeader({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+export function SiteHeader({
+  open,
+  onToggle,
+  account,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  account: PublicNavAccount | undefined;
+}) {
   return (
     <header className="sticky top-0 z-50 border-b border-line/80 bg-background/90 backdrop-blur-xl">
       <div className="container-shell flex h-[72px] items-center justify-between">
@@ -28,7 +37,11 @@ export function SiteHeader({ open, onToggle }: { open: boolean; onToggle: () => 
         <div className="hidden items-center gap-3 md:flex">
           <ThemeToggle />
           <CurrencySwitcher compact />
-          <Link href="/sign-in" className="px-2 text-sm font-semibold hover:text-wine">Sign in</Link>
+          {account !== undefined && (
+            <Link href={account ? `/${account.role}` : "/sign-in"} className="px-2 text-sm font-semibold hover:text-wine">
+              {account ? "Dashboard" : "Sign in"}
+            </Link>
+          )}
           <ButtonLink href="/request" className="min-h-10 px-4 py-2">Start a request</ButtonLink>
         </div>
         <button

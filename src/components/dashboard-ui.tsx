@@ -80,11 +80,7 @@ export function StatusPill({
   );
 }
 
-export function Panel({
-  children,
-  className,
-  ...rest
-}: React.ComponentPropsWithoutRef<"section">) {
+export function Panel({ children, className, ...rest }: React.ComponentPropsWithoutRef<"section">) {
   return (
     <section className={cn("rounded-xl  bg-paper", className)} {...rest}>
       {children}

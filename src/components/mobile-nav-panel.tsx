@@ -2,13 +2,22 @@
 
 import Link from "next/link";
 import { X } from "lucide-react";
+import type { PublicNavAccount } from "@/lib/use-public-account";
 import { publicNavLinks } from "./site-header";
 import { Logo } from "./logo";
 import { CurrencySwitcher } from "./price";
 import { ThemeToggle } from "./theme-toggle";
 import { ButtonLink } from "./ui/button";
 
-export function MobileNavPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function MobileNavPanel({
+  open,
+  onClose,
+  account,
+}: {
+  open: boolean;
+  onClose: () => void;
+  account: PublicNavAccount | undefined;
+}) {
   return (
     <aside
       className="fixed inset-y-0 left-0 z-10 flex w-[280px] flex-col bg-ink p-5 text-white md:hidden"
@@ -41,9 +50,16 @@ export function MobileNavPanel({ open, onClose }: { open: boolean; onClose: () =
           <ThemeToggle />
           <CurrencySwitcher compact />
         </div>
-        <ButtonLink href="/sign-in" variant="secondary" className="w-full justify-center bg-transparent text-white hover:bg-white/10">
-          Sign in
-        </ButtonLink>
+        {account !== undefined && (
+          <ButtonLink
+            href={account ? `/${account.role}` : "/sign-in"}
+            onClick={onClose}
+            variant="secondary"
+            className="w-full justify-center bg-transparent text-white hover:bg-white/10"
+          >
+            {account ? "Dashboard" : "Sign in"}
+          </ButtonLink>
+        )}
         <ButtonLink href="/request" className="w-full justify-center">Start a request</ButtonLink>
       </div>
     </aside>

@@ -35,11 +35,18 @@ export function NotificationBell() {
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     if (!supabase) return;
+    // Guard against React Strict Mode's dev-only double-invoke: the first invocation's
+    // cleanup can otherwise fire before this async setup finishes creating/subscribing
+    // its channel, leaving it dangling to collide with the second invocation's channel
+    // of the same name ("cannot add postgres_changes callbacks... after subscribe()").
+    let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
       setUserId(user.id);
 
       const { data } = await supabase
@@ -48,19 +55,32 @@ export function NotificationBell() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(20);
+      if (cancelled) return;
       setNotifications((data as NotificationRow[] | null) ?? []);
 
-      channel = supabase
+      const newChannel = supabase
         .channel(`notifications:${user.id}`)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-          (payload) => setNotifications((prev) => [payload.new as NotificationRow, ...prev].slice(0, 20)),
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) =>
+            setNotifications((prev) => [payload.new as NotificationRow, ...prev].slice(0, 20))
         )
         .subscribe();
+      if (cancelled) {
+        supabase.removeChannel(newChannel);
+        return;
+      }
+      channel = newChannel;
     })();
 
     return () => {
+      cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
   }, []);
@@ -68,9 +88,17 @@ export function NotificationBell() {
   const unreadCount = notifications.filter((item) => !item.read_at).length;
 
   async function markRead(id: string) {
-    setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, read_at: item.read_at ?? new Date().toISOString() } : item)));
+    setNotifications((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, read_at: item.read_at ?? new Date().toISOString() } : item
+      )
+    );
     const supabase = createSupabaseBrowserClient();
-    await supabase?.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id).is("read_at", null);
+    await supabase
+      ?.from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", id)
+      .is("read_at", null);
   }
 
   async function markAllRead() {
@@ -78,7 +106,11 @@ export function NotificationBell() {
     const now = new Date().toISOString();
     setNotifications((prev) => prev.map((item) => ({ ...item, read_at: item.read_at ?? now })));
     const supabase = createSupabaseBrowserClient();
-    await supabase?.from("notifications").update({ read_at: now }).eq("user_id", userId).is("read_at", null);
+    await supabase
+      ?.from("notifications")
+      .update({ read_at: now })
+      .eq("user_id", userId)
+      .is("read_at", null);
   }
 
   return (
@@ -98,30 +130,53 @@ export function NotificationBell() {
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <p className="text-sm font-semibold">Notifications</p>
           {unreadCount > 0 && (
-            <button onClick={markAllRead} className="flex items-center gap-1 text-[11px] font-medium text-muted hover:text-foreground">
+            <button
+              onClick={markAllRead}
+              className="flex items-center gap-1 text-[11px] font-medium text-muted hover:text-foreground"
+            >
               <CheckCheck size={13} /> Mark all read
             </button>
           )}
         </div>
         <div className="max-h-[360px] overflow-y-auto">
-          {notifications.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted">No notifications yet.</p>}
+          {notifications.length === 0 && (
+            <p className="px-4 py-8 text-center text-sm text-muted">No notifications yet.</p>
+          )}
           {notifications.map((item) => {
             const content = (
-              <div className={cn("flex gap-2 border-b border-line px-4 py-3 last:border-b-0", !item.read_at && "bg-wine/[0.04]")}>
-                {!item.read_at && <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-wine" />}
+              <div
+                className={cn(
+                  "flex gap-2 border-b border-line px-4 py-3 last:border-b-0",
+                  !item.read_at && "bg-wine/[0.04]"
+                )}
+              >
+                {!item.read_at && (
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-wine" />
+                )}
                 <div className={cn("min-w-0", item.read_at && "pl-3.5")}>
                   <p className="truncate text-[13px] font-semibold">{item.title}</p>
                   <p className="line-clamp-2 text-xs text-muted">{item.body}</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-wide text-muted/70">{timeAgo(item.created_at)}</p>
+                  <p className="mt-1 text-[10px] uppercase tracking-wide text-muted/70">
+                    {timeAgo(item.created_at)}
+                  </p>
                 </div>
               </div>
             );
             return item.href ? (
-              <Link key={item.id} href={item.href} onClick={() => markRead(item.id)} className="block hover:bg-background">
+              <Link
+                key={item.id}
+                href={item.href}
+                onClick={() => markRead(item.id)}
+                className="block hover:bg-background"
+              >
                 {content}
               </Link>
             ) : (
-              <button key={item.id} onClick={() => markRead(item.id)} className="block w-full text-left hover:bg-background">
+              <button
+                key={item.id}
+                onClick={() => markRead(item.id)}
+                className="block w-full text-left hover:bg-background"
+              >
                 {content}
               </button>
             );

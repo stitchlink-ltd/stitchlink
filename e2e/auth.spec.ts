@@ -1,7 +1,28 @@
 import { expect, test } from "@playwright/test";
 
-test("registration exposes secure customer and tailor choices",async({page})=>{await page.goto("/sign-up");await expect(page.getByRole("heading",{name:"Join StitchLink"})).toBeVisible();await expect(page.getByLabel("Full name")).toBeVisible();await expect(page.getByLabel("Find a tailor")).toBeChecked();await page.getByLabel("Offer tailoring").check();await expect(page.getByLabel("Offer tailoring")).toBeChecked();await expect(page.getByPlaceholder("At least 10 characters")).toBeVisible();await expect(page.getByRole("button",{name:/Continue with Google/i})).toBeVisible();await expect(page.getByText("Admin",{exact:true})).toHaveCount(1)});
+test("registration exposes secure customer and tailor choices", async ({ page }) => {
+  await page.goto("/sign-up");
+  await expect(page.getByRole("heading", { name: "Join StitchLink" })).toBeVisible();
+  await expect(page.getByLabel("Full name")).toBeVisible();
+  await expect(page.getByLabel("Find a tailor")).toBeChecked();
+  await page.getByLabel("Offer tailoring").check();
+  await expect(page.getByLabel("Offer tailoring")).toBeChecked();
+  await expect(page.getByPlaceholder("At least 10 characters")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Continue with Google/i })).toBeVisible();
+  await expect(page.getByText("Admin", { exact: true })).toHaveCount(1);
+});
 
-test("password recovery uses a privacy-preserving form",async({page})=>{await page.goto("/forgot-password");await expect(page.getByRole("heading",{name:"Reset your password"})).toBeVisible();await expect(page.getByText(/response is the same for every address/i)).toBeVisible();await expect(page.getByRole("button",{name:"Send reset instructions"})).toBeVisible()});
+test("password recovery uses a privacy-preserving form", async ({ page }) => {
+  await page.goto("/forgot-password");
+  await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
+  await expect(page.getByText(/response is the same for every address/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Send reset instructions" })).toBeVisible();
+});
 
-test("explicit development demo exposes role workspaces",async({page})=>{await page.goto("/sign-in");await expect(page.getByText("Local demo access")).toBeVisible();await page.getByRole("link",{name:"Customer",exact:true}).click();await expect(page.getByText("customer workspace",{exact:false})).toBeVisible();await expect(page.getByRole("button",{name:"Exit demo"}).first()).toBeVisible()});
+test("explicit development demo exposes role workspaces", async ({ page }) => {
+  await page.goto("/sign-in");
+  await expect(page.getByText("Local demo access")).toBeVisible();
+  await page.getByRole("link", { name: "Customer", exact: true }).click();
+  await expect(page.getByText("customer workspace", { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Exit demo" }).first()).toBeVisible();
+});

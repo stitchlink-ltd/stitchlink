@@ -2,9 +2,12 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ImagePlus, LoaderCircle, Send } from "lucide-react";
+import { ImagePlus, LoaderCircle, Send, X } from "lucide-react";
 import type { PublishedTailor } from "@/data/marketplace";
-import { marketplaceInitialState, submitRequest } from "@/app/marketplace/actions";
+import { submitRequest } from "@/app/marketplace/actions";
+import { useCurrency } from "./currency-provider";
+import { formatMoney } from "@/lib/money";
+import { marketplaceInitialState } from "@/lib/marketplace-state";
 import { Button } from "./ui/button";
 
 async function upload(file: File) {
@@ -22,7 +25,11 @@ export function RequestWizard({ initialTailor, tailors }: { initialTailor?: stri
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [budgetInput, setBudgetInput] = useState("");
   const selected = tailors.find((tailor) => tailor.slug === initialTailor);
+  const { currency, ngnPerUsd } = useCurrency();
+  const budgetNgn = currency === "NGN" ? budgetInput : budgetInput ? String(Math.round(Number(budgetInput) * ngnPerUsd)) : "";
+  const budgetMin = currency === "NGN" ? 50000 : Math.ceil(50000 / ngnPerUsd);
 
   useEffect(() => {
     return () => {
@@ -36,6 +43,13 @@ export function RequestWizard({ initialTailor, tailors }: { initialTailor?: stri
     setPreviewUrls(selectedFiles.map((file) => URL.createObjectURL(file)));
     event.currentTarget.value = "";
   }
+  function removeFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviewUrls((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
   async function submit(formData: FormData) {
     setMessage("");
     try {
@@ -44,18 +58,18 @@ export function RequestWizard({ initialTailor, tailors }: { initialTailor?: stri
       if (state.status === "success") router.push("/customer?created=1"); else setMessage(state.message ?? "Check the form and try again.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to submit your request."); }
   }
-  return <form action={(formData)=>startTransition(()=>void submit(formData))} className="mx-auto max-w-3xl overflow-hidden rounded-[2rem] border border-line bg-paper soft-shadow">
+  return <form action={(formData)=>startTransition(()=>submit(formData))} className="mx-auto max-w-3xl overflow-hidden rounded-[2rem] border border-line bg-paper soft-shadow">
     <div className="border-b border-line px-6 py-7 sm:px-10"><p className="eyebrow text-wine">Custom request</p><h1 className="mt-2 font-display text-4xl">Tell your tailor what you need.</h1><p className="mt-2 text-sm leading-6 text-muted">Nothing is charged until you accept a structured quote.</p></div>
     <div className="grid gap-5 p-6 sm:p-10">
       <label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Tailor</span><select name="tailorId" defaultValue={selected?.id ?? ""} required className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"><option value="">Choose a verified tailor</option>{tailors.map((tailor)=><option key={tailor.id} value={tailor.id}>{tailor.studioName} · {tailor.city}</option>)}</select></label>
       {tailors.length===0&&<p className="rounded-xl bg-wine/5 p-3 text-sm text-wine">There are no verified tailors available yet.</p>}
       <div className="grid gap-5 sm:grid-cols-2"><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Garment type</span><input name="garmentType" required placeholder="Agbada, dress, suit…" className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"/></label><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Needed by</span><input name="neededBy" type="date" required className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"/></label></div>
       <label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Describe the piece</span><textarea name="description" required minLength={10} rows={5} placeholder="Silhouette, occasion, fabric, colours and details…" className="w-full rounded-xl border border-line bg-background p-4 text-sm"/></label>
-      <div className="grid gap-5 sm:grid-cols-2"><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Budget in NGN</span><input name="budgetNgn" type="number" min="50000" step="1000" required className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"/></label><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Measurements</span><select name="measurementMethod" defaultValue="profile" className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"><option value="profile">Use saved profile</option><option value="call">Book a call</option><option value="later">Decide with tailor</option></select></label></div>
+      <div className="grid gap-5 sm:grid-cols-2"><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Budget in {currency}</span><input type="number" min={budgetMin} step="any" required value={budgetInput} onChange={(event)=>setBudgetInput(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"/><input type="hidden" name="budgetNgn" value={budgetNgn}/>{currency==="USD"&&budgetInput&&<span className="mt-1.5 block text-xs text-muted">≈ {formatMoney(Number(budgetNgn)*100,"NGN")} exact charge</span>}</label><label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Measurements</span><select name="measurementMethod" defaultValue="profile" className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"><option value="profile">Use saved profile</option><option value="call">Book a call</option><option value="later">Decide with tailor</option></select></label></div>
       <label><span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted">Delivery</span><select name="deliveryPreference" defaultValue="shipping" className="min-h-12 w-full rounded-xl border border-line bg-background px-4 text-sm"><option value="shipping">Ship to my address</option><option value="pickup">Pick up from atelier</option><option value="decide_later">Decide with tailor</option></select></label>
       <label className="grid cursor-pointer place-items-center rounded-xl border border-dashed border-line bg-background p-6 text-center"><ImagePlus className="text-wine"/><span className="mt-2 text-sm font-semibold">Add up to five inspiration images</span><span className="mt-1 text-xs text-muted">JPG, PNG or WEBP · max 10 MB each</span><input type="file" multiple accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handleFilesChange}/></label>
       {files.length>0&&<p className="text-xs text-muted">{files.length} image{files.length===1?"":"s"} selected</p>}
-      {previewUrls.length>0&&<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{previewUrls.map((url,index)=><div key={`${url}-${index}`} className="overflow-hidden rounded-xl border border-line bg-background"><img src={url} alt={`Inspiration preview ${index + 1}`} className="h-28 w-full object-cover" /></div>)}</div>}
+      {previewUrls.length>0&&<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{previewUrls.map((url,index)=><div key={`${url}-${index}`} className="relative overflow-hidden rounded-xl border border-line bg-background"><img src={url} alt={`Inspiration preview ${index + 1}`} className="h-28 w-full object-cover" /><button type="button" onClick={()=>removeFile(index)} aria-label={`Remove inspiration image ${index + 1}`} className="absolute right-1.5 top-1.5 grid size-6 place-items-center rounded-full bg-ink/70 text-white transition hover:bg-ink"><X size={13}/></button></div>)}</div>}
       <label className="flex gap-3 text-xs text-muted"><input name="hasFabric" type="checkbox" className="mt-0.5 accent-wine"/>I already have the fabric.</label>
       {message&&<p className="rounded-xl bg-wine/5 p-3 text-sm text-wine">{message}</p>}
     </div>
