@@ -1,4 +1,14 @@
-import { Layers, Package, PackageCheck, Palette, Ruler, Scissors, Shirt, Sparkles, type LucideIcon } from "lucide-react";
+import {
+  Layers,
+  Package,
+  PackageCheck,
+  Palette,
+  Ruler,
+  Scissors,
+  Shirt,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 
 const stageColors: Record<string, string> = {
   design: "bg-blue",

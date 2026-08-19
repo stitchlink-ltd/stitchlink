@@ -55,3 +55,9 @@ export const env = schema.parse({
 if (process.env.NODE_ENV === "production" && env.DEMO_MODE === "true") {
   throw new Error("DEMO_MODE must never be enabled in production.");
 }
+
+if (process.env.NODE_ENV === "production" && !(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN)) {
+  throw new Error(
+    "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production — without them, enforceRateLimit() silently allows unlimited requests."
+  );
+}

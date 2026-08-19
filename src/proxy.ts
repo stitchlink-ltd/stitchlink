@@ -25,11 +25,35 @@ export async function proxy(request: NextRequest) {
   const csp = contentSecurityPolicy(nonce);
   headers.set("x-nonce", nonce);
   headers.set("Content-Security-Policy", csp);
-  const url=process.env.NEXT_PUBLIC_SUPABASE_URL;const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  let response=NextResponse.next({request:{headers}});
-  if(url&&key){const supabase=createServerClient(url,key,{cookies:{getAll:()=>request.cookies.getAll(),setAll:(items)=>{items.forEach(({name,value})=>request.cookies.set(name,value));response=NextResponse.next({request:{headers}});items.forEach(({name,value,options})=>response.cookies.set(name,value,options));}}});await supabase.auth.getClaims();}
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  let response = NextResponse.next({ request: { headers } });
+  if (url && key) {
+    const supabase = createServerClient(url, key, {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (items) => {
+          items.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request: { headers } });
+          items.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        },
+      },
+    });
+    await supabase.auth.getClaims();
+  }
   response.headers.set("Content-Security-Policy", csp);
   return response;
 }
 
-export const config={matcher:[{source:"/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",missing:[{type:"header",key:"next-router-prefetch"},{type:"header",key:"purpose",value:"prefetch"}]}]};
+export const config = {
+  matcher: [
+    {
+      source:
+        "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
+  ],
+};

@@ -28,7 +28,7 @@ export function zonedDateTimeToUtc(localDateTime: string, timeZone: string): Dat
     Number(parts.day),
     Number(parts.hour),
     Number(parts.minute),
-    Number(parts.second),
+    Number(parts.second)
   );
   return new Date(asIfUtc.getTime() + (asIfUtc.getTime() - wallClockInZoneAsUtc));
 }

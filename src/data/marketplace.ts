@@ -1,24 +1,57 @@
 import "server-only";
 
-import { capacityForGrade } from "@/lib/grading";
+import { getTailorAppointments } from "@/data/appointments";
+import { capacityForGrade, gradeRules } from "@/lib/grading";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Tailor } from "@/lib/types";
 
-export type PublishedTailor = { id: string; slug: string; studioName: string; city: string; state: string; specialties: string[]; grade: number; startingPriceKobo: number; activeJobs: number; capacity: number };
+export type PublishedTailor = {
+  id: string;
+  slug: string;
+  studioName: string;
+  city: string;
+  state: string;
+  specialties: string[];
+  grade: number;
+  startingPriceKobo: number;
+  activeJobs: number;
+  capacity: number;
+};
 
 export async function getPublishedTailors(): Promise<PublishedTailor[]> {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return [];
-  const { data } = await supabase.from("tailor_profiles").select("user_id,slug,studio_name,city,state,specialties,grade,starting_price_kobo,active_job_count").eq("published",true).eq("verification_status","approved").order("studio_name");
-  return ((data ?? []) as Array<Record<string, unknown>>).map((tailor) => ({ id: String(tailor.user_id), slug: String(tailor.slug), studioName: String(tailor.studio_name), city: String(tailor.city), state: String(tailor.state), specialties: Array.isArray(tailor.specialties) ? tailor.specialties.map(String) : [], grade: Number(tailor.grade), startingPriceKobo: Number(tailor.starting_price_kobo), activeJobs: Number(tailor.active_job_count), capacity: 0 }));
+  const { data } = await supabase
+    .from("tailor_profiles")
+    .select(
+      "user_id,slug,studio_name,city,state,specialties,grade,starting_price_kobo,active_job_count"
+    )
+    .eq("published", true)
+    .eq("verification_status", "approved")
+    .order("studio_name");
+  return ((data ?? []) as Array<Record<string, unknown>>).map((tailor) => ({
+    id: String(tailor.user_id),
+    slug: String(tailor.slug),
+    studioName: String(tailor.studio_name),
+    city: String(tailor.city),
+    state: String(tailor.state),
+    specialties: Array.isArray(tailor.specialties) ? tailor.specialties.map(String) : [],
+    grade: Number(tailor.grade),
+    startingPriceKobo: Number(tailor.starting_price_kobo),
+    activeJobs: Number(tailor.active_job_count),
+    capacity: 0,
+  }));
 }
 
-const tailorDirectoryColumns = "user_id,slug,studio_name,bio,city,state,specialties,grade,starting_price_kobo,turnaround_min_days,turnaround_max_days,active_job_count,completed_job_count,average_rating,on_time_rate,profiles(display_name)";
+const tailorDirectoryColumns =
+  "user_id,slug,studio_name,bio,city,state,specialties,grade,starting_price_kobo,turnaround_min_days,turnaround_max_days,active_job_count,completed_job_count,average_rating,on_time_rate,profiles(display_name)";
 
 function formatTurnaround(minDays: number, maxDays: number) {
   const minWeeks = Math.max(1, Math.round(minDays / 7));
   const maxWeeks = Math.max(minWeeks, Math.round(maxDays / 7));
-  return minWeeks === maxWeeks ? `${minWeeks} week${minWeeks > 1 ? "s" : ""}` : `${minWeeks}–${maxWeeks} weeks`;
+  return minWeeks === maxWeeks
+    ? `${minWeeks} week${minWeeks > 1 ? "s" : ""}`
+    : `${minWeeks}–${maxWeeks} weeks`;
 }
 
 function mapTailorRow(row: Record<string, unknown>): Tailor {
@@ -49,27 +82,87 @@ function mapTailorRow(row: Record<string, unknown>): Tailor {
 export async function getPublishedTailorDirectory(): Promise<Tailor[]> {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return [];
-  const { data } = await supabase.from("tailor_profiles").select(tailorDirectoryColumns).eq("published", true).eq("verification_status", "approved").order("studio_name");
+  const { data } = await supabase
+    .from("tailor_profiles")
+    .select(tailorDirectoryColumns)
+    .eq("published", true)
+    .eq("verification_status", "approved")
+    .order("studio_name");
   return ((data ?? []) as Array<Record<string, unknown>>).map(mapTailorRow);
 }
 
 export async function getPublishedTailorProfile(slug: string): Promise<Tailor | null> {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
-  const { data } = await supabase.from("tailor_profiles").select(tailorDirectoryColumns).eq("published", true).eq("verification_status", "approved").eq("slug", slug).maybeSingle();
+  const { data } = await supabase
+    .from("tailor_profiles")
+    .select(tailorDirectoryColumns)
+    .eq("published", true)
+    .eq("verification_status", "approved")
+    .eq("slug", slug)
+    .maybeSingle();
   return data ? mapTailorRow(data as Record<string, unknown>) : null;
 }
 
-export type MarketplaceOrder = { id: string; reference: string; tailorId: string; title: string; status: string; stage: string; totalKobo: number; dueDate: string; depositPaidAt: string | null; balancePaidAt: string | null };
+export type MarketplaceOrder = {
+  id: string;
+  reference: string;
+  tailorId: string;
+  title: string;
+  status: string;
+  stage: string;
+  totalKobo: number;
+  dueDate: string;
+  depositPaidAt: string | null;
+  balancePaidAt: string | null;
+};
 
 export async function getCustomerOrders(customerId: string): Promise<MarketplaceOrder[]> {
-  const supabase = await createSupabaseServerClient(); if (!supabase) return [];
-  const { data } = await supabase.from("orders").select("id,reference,tailor_id,tailoring_subtotal_kobo,delivery_kobo,status,stage,due_date,deposit_paid_at,balance_paid_at,custom_requests(garment_type)").eq("customer_id",customerId).order("created_at",{ascending:false});
-  return ((data ?? []) as Array<Record<string, unknown>>).map((order) => ({ id:String(order.id),reference:String(order.reference),tailorId:String(order.tailor_id),title:String((order.custom_requests as Record<string,unknown> | null)?.garment_type ?? "Custom piece"),status:String(order.status),stage:String(order.stage),totalKobo:Number(order.tailoring_subtotal_kobo)+Number(order.delivery_kobo),dueDate:String(order.due_date),depositPaidAt:order.deposit_paid_at ? String(order.deposit_paid_at) : null,balancePaidAt:order.balance_paid_at ? String(order.balance_paid_at) : null }));
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("orders")
+    .select(
+      "id,reference,tailor_id,tailoring_subtotal_kobo,delivery_kobo,status,stage,due_date,deposit_paid_at,balance_paid_at,custom_requests(garment_type)"
+    )
+    .eq("customer_id", customerId)
+    .order("created_at", { ascending: false });
+  return ((data ?? []) as Array<Record<string, unknown>>).map((order) => ({
+    id: String(order.id),
+    reference: String(order.reference),
+    tailorId: String(order.tailor_id),
+    title: String(
+      (order.custom_requests as Record<string, unknown> | null)?.garment_type ?? "Custom piece"
+    ),
+    status: String(order.status),
+    stage: String(order.stage),
+    totalKobo: Number(order.tailoring_subtotal_kobo) + Number(order.delivery_kobo),
+    dueDate: String(order.due_date),
+    depositPaidAt: order.deposit_paid_at ? String(order.deposit_paid_at) : null,
+    balancePaidAt: order.balance_paid_at ? String(order.balance_paid_at) : null,
+  }));
 }
 
-export type RequestOrder = { id: string; status: string; stage: string; depositPaidAt: string | null; balancePaidAt: string | null; reference: string };
-export type TailorRequest = { id: string; customerName: string; garmentType: string; description: string; budgetKobo: number; neededBy: string; status: string; images: { id: string }[]; conversationId: string | null; order: RequestOrder | null };
+export type RequestOrder = {
+  id: string;
+  status: string;
+  stage: string;
+  depositPaidAt: string | null;
+  balancePaidAt: string | null;
+  reference: string;
+};
+export type TailorRequest = {
+  id: string;
+  customerName: string;
+  garmentType: string;
+  description: string;
+  budgetKobo: number;
+  neededBy: string;
+  status: string;
+  images: { id: string }[];
+  conversationId: string | null;
+  order: RequestOrder | null;
+};
 
 function firstOrNull<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -77,16 +170,61 @@ function firstOrNull<T>(value: T | T[] | null | undefined): T | null {
 }
 
 export async function getTailorRequests(tailorId: string): Promise<TailorRequest[]> {
-  const supabase = await createSupabaseServerClient(); if (!supabase) return [];
-  const { data } = await supabase.from("custom_requests").select("id,garment_type,description,budget_kobo,needed_by,status,customer_id,profiles!custom_requests_customer_id_fkey(display_name),request_images(id),orders(id,status,stage,deposit_paid_at,balance_paid_at,reference),conversations(id)").eq("preferred_tailor_id",tailorId).in("status",["submitted","negotiating","quoted","accepted"]).order("created_at",{ascending:false});
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("custom_requests")
+    .select(
+      "id,garment_type,description,budget_kobo,needed_by,status,customer_id,profiles!custom_requests_customer_id_fkey(display_name),request_images(id),orders(id,status,stage,deposit_paid_at,balance_paid_at,reference),conversations(id)"
+    )
+    .eq("preferred_tailor_id", tailorId)
+    .in("status", ["submitted", "negotiating", "quoted", "accepted"])
+    .order("created_at", { ascending: false });
   return ((data ?? []) as Array<Record<string, unknown>>).map((request) => {
-    const conversation = firstOrNull(request.conversations as Record<string, unknown> | Array<Record<string, unknown>> | null);
-    const order = firstOrNull(request.orders as Record<string, unknown> | Array<Record<string, unknown>> | null);
-    return { id:String(request.id),customerName:String((request.profiles as Record<string,unknown> | null)?.display_name ?? "Customer"),garmentType:String(request.garment_type),description:String(request.description),budgetKobo:Number(request.budget_kobo),neededBy:String(request.needed_by),status:String(request.status),images:((request.request_images as Array<Record<string,unknown>> | null) ?? []).map((image)=>({id:String(image.id)})),conversationId:conversation ? String(conversation.id) : null,order: order ? { id: String(order.id), status: String(order.status), stage: String(order.stage), depositPaidAt: order.deposit_paid_at ? String(order.deposit_paid_at) : null, balancePaidAt: order.balance_paid_at ? String(order.balance_paid_at) : null, reference: String(order.reference) } : null };
+    const conversation = firstOrNull(
+      request.conversations as Record<string, unknown> | Array<Record<string, unknown>> | null
+    );
+    const order = firstOrNull(
+      request.orders as Record<string, unknown> | Array<Record<string, unknown>> | null
+    );
+    return {
+      id: String(request.id),
+      customerName: String(
+        (request.profiles as Record<string, unknown> | null)?.display_name ?? "Customer"
+      ),
+      garmentType: String(request.garment_type),
+      description: String(request.description),
+      budgetKobo: Number(request.budget_kobo),
+      neededBy: String(request.needed_by),
+      status: String(request.status),
+      images: ((request.request_images as Array<Record<string, unknown>> | null) ?? []).map(
+        (image) => ({ id: String(image.id) })
+      ),
+      conversationId: conversation ? String(conversation.id) : null,
+      order: order
+        ? {
+            id: String(order.id),
+            status: String(order.status),
+            stage: String(order.stage),
+            depositPaidAt: order.deposit_paid_at ? String(order.deposit_paid_at) : null,
+            balancePaidAt: order.balance_paid_at ? String(order.balance_paid_at) : null,
+            reference: String(order.reference),
+          }
+        : null,
+    };
   });
 }
 
-export type RequestQuote = { id: string; revision: number; tailoringKobo: number; deliveryKobo: number; scope: string; dueDate: string; status: string; expiresAt: string };
+export type RequestQuote = {
+  id: string;
+  revision: number;
+  tailoringKobo: number;
+  deliveryKobo: number;
+  scope: string;
+  dueDate: string;
+  status: string;
+  expiresAt: string;
+};
 export type CustomerRequest = {
   id: string;
   garmentType: string;
@@ -102,18 +240,34 @@ export type CustomerRequest = {
 };
 
 export async function getCustomerRequests(customerId: string): Promise<CustomerRequest[]> {
-  const supabase = await createSupabaseServerClient(); if (!supabase) return [];
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
   const { data } = await supabase
     .from("custom_requests")
-    .select("id,garment_type,description,budget_kobo,needed_by,status,tailor_profiles!custom_requests_preferred_tailor_id_fkey(studio_name),request_images(id),quotes(id,revision,tailoring_subtotal_kobo,delivery_kobo,scope,due_date,status,expires_at),orders(id,status,stage,deposit_paid_at,balance_paid_at,reference),conversations(id)")
+    .select(
+      "id,garment_type,description,budget_kobo,needed_by,status,tailor_profiles!custom_requests_preferred_tailor_id_fkey(studio_name),request_images(id),quotes(id,revision,tailoring_subtotal_kobo,delivery_kobo,scope,due_date,status,expires_at),orders(id,status,stage,deposit_paid_at,balance_paid_at,reference),conversations(id)"
+    )
     .eq("customer_id", customerId)
     .order("created_at", { ascending: false });
   return ((data ?? []) as Array<Record<string, unknown>>).map((request) => {
     const tailor = request.tailor_profiles as Record<string, unknown> | null;
-    const order = firstOrNull(request.orders as Record<string, unknown> | Array<Record<string, unknown>> | null);
-    const conversation = firstOrNull(request.conversations as Record<string, unknown> | Array<Record<string, unknown>> | null);
+    const order = firstOrNull(
+      request.orders as Record<string, unknown> | Array<Record<string, unknown>> | null
+    );
+    const conversation = firstOrNull(
+      request.conversations as Record<string, unknown> | Array<Record<string, unknown>> | null
+    );
     const quotes = ((request.quotes as Array<Record<string, unknown>> | null) ?? [])
-      .map((quote) => ({ id: String(quote.id), revision: Number(quote.revision), tailoringKobo: Number(quote.tailoring_subtotal_kobo), deliveryKobo: Number(quote.delivery_kobo), scope: String(quote.scope), dueDate: String(quote.due_date), status: String(quote.status), expiresAt: String(quote.expires_at) }))
+      .map((quote) => ({
+        id: String(quote.id),
+        revision: Number(quote.revision),
+        tailoringKobo: Number(quote.tailoring_subtotal_kobo),
+        deliveryKobo: Number(quote.delivery_kobo),
+        scope: String(quote.scope),
+        dueDate: String(quote.due_date),
+        status: String(quote.status),
+        expiresAt: String(quote.expires_at),
+      }))
       .sort((a, b) => b.revision - a.revision);
     return {
       id: String(request.id),
@@ -123,66 +277,181 @@ export async function getCustomerRequests(customerId: string): Promise<CustomerR
       neededBy: String(request.needed_by),
       status: String(request.status),
       tailorName: String(tailor?.studio_name ?? "Tailor"),
-      images: ((request.request_images as Array<Record<string, unknown>> | null) ?? []).map((image) => ({ id: String(image.id) })),
+      images: ((request.request_images as Array<Record<string, unknown>> | null) ?? []).map(
+        (image) => ({ id: String(image.id) })
+      ),
       quotes,
-      order: order ? { id: String(order.id), status: String(order.status), stage: String(order.stage), depositPaidAt: order.deposit_paid_at ? String(order.deposit_paid_at) : null, balancePaidAt: order.balance_paid_at ? String(order.balance_paid_at) : null, reference: String(order.reference) } : null,
+      order: order
+        ? {
+            id: String(order.id),
+            status: String(order.status),
+            stage: String(order.stage),
+            depositPaidAt: order.deposit_paid_at ? String(order.deposit_paid_at) : null,
+            balancePaidAt: order.balance_paid_at ? String(order.balance_paid_at) : null,
+            reference: String(order.reference),
+          }
+        : null,
       conversationId: conversation ? String(conversation.id) : null,
     };
   });
 }
 
-export type ConversationMessage = { id: string; senderId: string; senderName: string; body: string; attachmentPaths: string[]; createdAt: string };
+export type CustomerEngagement = {
+  tailorId: string;
+  tailorName: string;
+  garmentType: string;
+  requestId: string;
+  orderId: string | null;
+  calendlyUrl: string | null;
+};
 
-export async function getConversationMessages(conversationId: string): Promise<ConversationMessage[]> {
-  const supabase = await createSupabaseServerClient(); if (!supabase) return [];
-  const { data } = await supabase.from("messages").select("id,sender_id,body,attachment_paths,created_at,profiles(display_name)").eq("conversation_id", conversationId).order("created_at", { ascending: true });
+export async function getCustomerEngagements(customerId: string): Promise<CustomerEngagement[]> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("custom_requests")
+    .select(
+      "id,garment_type,preferred_tailor_id,tailor_profiles!custom_requests_preferred_tailor_id_fkey(studio_name,calendly_url),orders(id,status)"
+    )
+    .eq("customer_id", customerId)
+    .not("preferred_tailor_id", "is", null)
+    .in("status", ["negotiating", "quoted", "accepted"])
+    .order("created_at", { ascending: false });
+  return ((data ?? []) as Array<Record<string, unknown>>).map((request) => {
+    const tailor = request.tailor_profiles as Record<string, unknown> | null;
+    const order = firstOrNull(
+      request.orders as Record<string, unknown> | Array<Record<string, unknown>> | null
+    );
+    const orderStatus = order ? String(order.status) : null;
+    return {
+      tailorId: String(request.preferred_tailor_id),
+      tailorName: String(tailor?.studio_name ?? "Tailor"),
+      garmentType: String(request.garment_type),
+      requestId: String(request.id),
+      orderId:
+        order && orderStatus !== "completed" && orderStatus !== "cancelled"
+          ? String(order.id)
+          : null,
+      calendlyUrl: tailor?.calendly_url ? String(tailor.calendly_url) : null,
+    };
+  });
+}
+
+export type ConversationMessage = {
+  id: string;
+  senderId: string;
+  senderName: string;
+  body: string;
+  attachmentPaths: string[];
+  createdAt: string;
+};
+
+export async function getConversationMessages(
+  conversationId: string
+): Promise<ConversationMessage[]> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("messages")
+    .select("id,sender_id,body,attachment_paths,created_at,profiles(display_name)")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true });
   return ((data ?? []) as Array<Record<string, unknown>>).map((message) => ({
     id: String(message.id),
     senderId: String(message.sender_id),
-    senderName: String((message.profiles as Record<string, unknown> | null)?.display_name ?? "Member"),
+    senderName: String(
+      (message.profiles as Record<string, unknown> | null)?.display_name ?? "Member"
+    ),
     body: String(message.body),
-    attachmentPaths: Array.isArray(message.attachment_paths) ? message.attachment_paths.map(String) : [],
+    attachmentPaths: Array.isArray(message.attachment_paths)
+      ? message.attachment_paths.map(String)
+      : [],
     createdAt: String(message.created_at),
   }));
 }
 
-export type AdminConversation = { conversationId: string; garmentType: string; customerName: string; tailorName: string; reference: string; images: { id: string }[] };
+export type AdminConversation = {
+  conversationId: string;
+  garmentType: string;
+  customerName: string;
+  tailorName: string;
+  reference: string;
+  images: { id: string }[];
+};
 
 // Superadmin oversight mirrors the customer/tailor "Messages" cutover: a conversation
 // only needs admin visibility once it's backing a real, paid job (pre-payment negotiation
 // stays between the two parties).
 export async function getAdminConversations(): Promise<AdminConversation[]> {
-  const supabase = await createSupabaseServerClient(); if (!supabase) return [];
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
   const { data } = await supabase
     .from("orders")
-    .select("reference,deposit_paid_at,balance_paid_at,custom_requests(garment_type,conversations(id),request_images(id)),profiles!orders_customer_id_fkey(display_name),tailor_profiles(studio_name)")
+    .select(
+      "reference,deposit_paid_at,balance_paid_at,custom_requests(garment_type,conversations(id),request_images(id)),profiles!orders_customer_id_fkey(display_name),tailor_profiles(studio_name)"
+    )
     .or("deposit_paid_at.not.is.null,balance_paid_at.not.is.null")
     .order("created_at", { ascending: false });
   return ((data ?? []) as Array<Record<string, unknown>>).flatMap((order) => {
-    const request = firstOrNull(order.custom_requests as Record<string, unknown> | Array<Record<string, unknown>> | null);
-    const conversation = request ? firstOrNull(request.conversations as Record<string, unknown> | Array<Record<string, unknown>> | null) : null;
+    const request = firstOrNull(
+      order.custom_requests as Record<string, unknown> | Array<Record<string, unknown>> | null
+    );
+    const conversation = request
+      ? firstOrNull(
+          request.conversations as Record<string, unknown> | Array<Record<string, unknown>> | null
+        )
+      : null;
     if (!conversation) return [];
-    return [{
-      conversationId: String(conversation.id),
-      garmentType: String(request?.garment_type ?? "Custom piece"),
-      customerName: String((order.profiles as Record<string, unknown> | null)?.display_name ?? "Customer"),
-      tailorName: String((order.tailor_profiles as Record<string, unknown> | null)?.studio_name ?? "Tailor"),
-      reference: String(order.reference),
-      images: ((request?.request_images as Array<Record<string, unknown>> | null) ?? []).map((image) => ({ id: String(image.id) })),
-    }];
+    return [
+      {
+        conversationId: String(conversation.id),
+        garmentType: String(request?.garment_type ?? "Custom piece"),
+        customerName: String(
+          (order.profiles as Record<string, unknown> | null)?.display_name ?? "Customer"
+        ),
+        tailorName: String(
+          (order.tailor_profiles as Record<string, unknown> | null)?.studio_name ?? "Tailor"
+        ),
+        reference: String(order.reference),
+        images: ((request?.request_images as Array<Record<string, unknown>> | null) ?? []).map(
+          (image) => ({ id: String(image.id) })
+        ),
+      },
+    ];
   });
 }
 
-export type TailorActiveJob = { id: string; reference: string; title: string; customerName: string; stage: string; status: string; dueDate: string; tryOnReady: boolean };
+export type TailorActiveJob = {
+  id: string;
+  reference: string;
+  title: string;
+  customerName: string;
+  stage: string;
+  status: string;
+  dueDate: string;
+  tryOnReady: boolean;
+};
 
 export async function getTailorActiveJobs(tailorId: string): Promise<TailorActiveJob[]> {
-  const supabase = await createSupabaseServerClient(); if (!supabase) return [];
-  const { data } = await supabase.from("orders").select("id,reference,stage,status,due_date,try_on_ready,custom_requests(garment_type),profiles!orders_customer_id_fkey(display_name)").eq("tailor_id", tailorId).in("status", ["active", "awaiting_balance", "ready", "shipped"]).order("due_date", { ascending: true });
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("orders")
+    .select(
+      "id,reference,stage,status,due_date,try_on_ready,custom_requests(garment_type),profiles!orders_customer_id_fkey(display_name)"
+    )
+    .eq("tailor_id", tailorId)
+    .in("status", ["active", "awaiting_balance", "ready", "shipped"])
+    .order("due_date", { ascending: true });
   return ((data ?? []) as Array<Record<string, unknown>>).map((order) => ({
     id: String(order.id),
     reference: String(order.reference),
-    title: String((order.custom_requests as Record<string, unknown> | null)?.garment_type ?? "Custom piece"),
-    customerName: String((order.profiles as Record<string, unknown> | null)?.display_name ?? "Customer"),
+    title: String(
+      (order.custom_requests as Record<string, unknown> | null)?.garment_type ?? "Custom piece"
+    ),
+    customerName: String(
+      (order.profiles as Record<string, unknown> | null)?.display_name ?? "Customer"
+    ),
     stage: String(order.stage),
     status: String(order.status),
     dueDate: String(order.due_date),
@@ -190,7 +459,171 @@ export async function getTailorActiveJobs(tailorId: string): Promise<TailorActiv
   }));
 }
 
-export type OrderProgressUpdate = { id: string; stage: string; note: string; imagePaths: string[]; createdAt: string };
+export type TailorPayout = {
+  id: string;
+  orderReference: string;
+  releasePhase: "initial" | "final";
+  amountKobo: number;
+  status: string;
+  providerReference: string | null;
+  paidAt: string | null;
+  createdAt: string;
+};
+
+export type TailorEarningsOverview = {
+  availableKobo: number;
+  protectedKobo: number;
+  paidThisYearKobo: number;
+  payouts: TailorPayout[];
+};
+
+export async function getTailorEarnings(tailorId: string): Promise<TailorEarningsOverview> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { availableKobo: 0, protectedKobo: 0, paidThisYearKobo: 0, payouts: [] };
+
+  const { data: payoutRows } = await supabase
+    .from("payouts")
+    .select(
+      "id,amount_kobo,release_phase,status,provider_reference,paid_at,created_at,orders(reference)"
+    )
+    .eq("tailor_id", tailorId)
+    .order("created_at", { ascending: false });
+
+  const payouts: TailorPayout[] = ((payoutRows ?? []) as Array<Record<string, unknown>>).map(
+    (row) => {
+      const order = firstOrNull(
+        row.orders as Record<string, unknown> | Array<Record<string, unknown>> | null
+      );
+      return {
+        id: String(row.id),
+        orderReference: String(order?.reference ?? "—"),
+        releasePhase: row.release_phase as "initial" | "final",
+        amountKobo: Number(row.amount_kobo),
+        status: String(row.status),
+        providerReference: row.provider_reference ? String(row.provider_reference) : null,
+        paidAt: row.paid_at ? String(row.paid_at) : null,
+        createdAt: String(row.created_at),
+      };
+    }
+  );
+
+  const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString();
+  const availableKobo = payouts
+    .filter((p) => ["eligible", "approved", "processing"].includes(p.status))
+    .reduce((sum, p) => sum + p.amountKobo, 0);
+  const paidThisYearKobo = payouts
+    .filter((p) => p.status === "paid" && p.paidAt && p.paidAt >= yearStart)
+    .reduce((sum, p) => sum + p.amountKobo, 0);
+  const totalPayoutKobo = payouts.reduce((sum, p) => sum + p.amountKobo, 0);
+
+  const { data: tailorOrders } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("tailor_id", tailorId);
+  const orderIds = ((tailorOrders ?? []) as Array<{ id: string }>).map((row) => row.id);
+  let totalPayableKobo = 0;
+  if (orderIds.length > 0) {
+    const { data: ledgerRows } = await supabase
+      .from("ledger_entries")
+      .select("amount_kobo")
+      .eq("entry_type", "tailor_payable")
+      .in("order_id", orderIds);
+    totalPayableKobo = ((ledgerRows ?? []) as Array<{ amount_kobo: number }>).reduce(
+      (sum, row) => sum + Number(row.amount_kobo),
+      0
+    );
+  }
+
+  return {
+    availableKobo,
+    protectedKobo: Math.max(0, totalPayableKobo - totalPayoutKobo),
+    paidThisYearKobo,
+    payouts,
+  };
+}
+
+export type TailorDashboardOverview = {
+  studioName: string;
+  grade: 1 | 2 | 3 | 4 | 5;
+  capacity: number;
+  activeJobCount: number;
+  completedJobCount: number;
+  averageRating: number;
+  onTimeRate: number;
+  lostDisputeRate: number;
+  nextGrade: (typeof gradeRules)[number] | null;
+  dueThisWeekCount: number;
+  overdueCount: number;
+  pendingQuoteRequestCount: number;
+  oldestPendingRequestAt: string | null;
+  nextAppointment: { startsAt: string; customerName: string } | null;
+  availablePayoutKobo: number;
+  verificationStatus: string;
+};
+
+export async function getTailorDashboardOverview(tailorId: string): Promise<TailorDashboardOverview | null> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return null;
+
+  const { data: profile } = await supabase
+    .from("tailor_profiles")
+    .select("studio_name,grade,active_job_count,completed_job_count,average_rating,on_time_rate,lost_dispute_rate,verification_status")
+    .eq("user_id", tailorId)
+    .maybeSingle();
+  if (!profile) return null;
+
+  const grade = Number(profile.grade) as 1 | 2 | 3 | 4 | 5;
+
+  const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: activeOrders } = await supabase
+    .from("orders")
+    .select("due_date")
+    .eq("tailor_id", tailorId)
+    .in("status", ["active", "awaiting_balance", "ready", "shipped"]);
+  const dueDates = ((activeOrders ?? []) as Array<{ due_date: string }>).map((row) => row.due_date);
+
+  const { data: pendingRequests } = await supabase
+    .from("custom_requests")
+    .select("created_at")
+    .eq("preferred_tailor_id", tailorId)
+    .in("status", ["submitted", "negotiating"])
+    .order("created_at", { ascending: true });
+  const pendingRows = (pendingRequests ?? []) as Array<{ created_at: string }>;
+
+  const appointments = await getTailorAppointments(tailorId);
+  const now = new Date();
+  const nextAppointment = appointments.find((appointment) => new Date(appointment.startsAt) >= now) ?? null;
+
+  const earnings = await getTailorEarnings(tailorId);
+
+  return {
+    studioName: String(profile.studio_name),
+    grade,
+    capacity: capacityForGrade(grade),
+    activeJobCount: Number(profile.active_job_count),
+    completedJobCount: Number(profile.completed_job_count),
+    averageRating: Number(profile.average_rating),
+    onTimeRate: Number(profile.on_time_rate),
+    lostDisputeRate: Number(profile.lost_dispute_rate),
+    nextGrade: gradeRules.find((rule) => rule.grade === grade + 1) ?? null,
+    dueThisWeekCount: dueDates.filter((date) => date <= weekFromNow).length,
+    overdueCount: dueDates.filter((date) => date < today).length,
+    pendingQuoteRequestCount: pendingRows.length,
+    oldestPendingRequestAt: pendingRows[0]?.created_at ?? null,
+    nextAppointment: nextAppointment ? { startsAt: nextAppointment.startsAt, customerName: nextAppointment.customerName } : null,
+    availablePayoutKobo: earnings.availableKobo,
+    verificationStatus: String(profile.verification_status),
+  };
+}
+
+export type OrderProgressUpdate = {
+  id: string;
+  stage: string;
+  note: string;
+  imagePaths: string[];
+  createdAt: string;
+};
 export type CustomerOrderDetail = {
   id: string;
   reference: string;
@@ -207,13 +640,33 @@ export type CustomerOrderDetail = {
   progress: OrderProgressUpdate[];
 };
 
-export async function getCustomerOrderDetail(orderId: string, customerId: string): Promise<CustomerOrderDetail | null> {
-  const supabase = await createSupabaseServerClient(); if (!supabase) return null;
-  const { data: order } = await supabase.from("orders").select("id,reference,stage,status,tailoring_subtotal_kobo,delivery_kobo,due_date,deposit_paid_at,balance_paid_at,try_on_ready,custom_requests(garment_type),tailor_profiles(studio_name)").eq("id", orderId).eq("customer_id", customerId).maybeSingle();
+export async function getCustomerOrderDetail(
+  orderId: string,
+  customerId: string
+): Promise<CustomerOrderDetail | null> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return null;
+  const { data: order } = await supabase
+    .from("orders")
+    .select(
+      "id,reference,stage,status,tailoring_subtotal_kobo,delivery_kobo,due_date,deposit_paid_at,balance_paid_at,try_on_ready,custom_requests(garment_type),tailor_profiles(studio_name)"
+    )
+    .eq("id", orderId)
+    .eq("customer_id", customerId)
+    .maybeSingle();
   if (!order) return null;
-  const { data: progressRows } = await supabase.from("progress_updates").select("id,stage,note,image_paths,created_at").eq("order_id", orderId).eq("customer_visible", true).order("created_at", { ascending: false });
-  const request = firstOrNull(order.custom_requests as Record<string, unknown> | Array<Record<string, unknown>> | null);
-  const tailor = firstOrNull(order.tailor_profiles as Record<string, unknown> | Array<Record<string, unknown>> | null);
+  const { data: progressRows } = await supabase
+    .from("progress_updates")
+    .select("id,stage,note,image_paths,created_at")
+    .eq("order_id", orderId)
+    .eq("customer_visible", true)
+    .order("created_at", { ascending: false });
+  const request = firstOrNull(
+    order.custom_requests as Record<string, unknown> | Array<Record<string, unknown>> | null
+  );
+  const tailor = firstOrNull(
+    order.tailor_profiles as Record<string, unknown> | Array<Record<string, unknown>> | null
+  );
   return {
     id: String(order.id),
     reference: String(order.reference),
@@ -227,6 +680,12 @@ export async function getCustomerOrderDetail(orderId: string, customerId: string
     depositPaidAt: order.deposit_paid_at ? String(order.deposit_paid_at) : null,
     balancePaidAt: order.balance_paid_at ? String(order.balance_paid_at) : null,
     tryOnReady: Boolean(order.try_on_ready),
-    progress: ((progressRows ?? []) as Array<Record<string, unknown>>).map((row) => ({ id: String(row.id), stage: String(row.stage), note: String(row.note), imagePaths: Array.isArray(row.image_paths) ? row.image_paths.map(String) : [], createdAt: String(row.created_at) })),
+    progress: ((progressRows ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      id: String(row.id),
+      stage: String(row.stage),
+      note: String(row.note),
+      imagePaths: Array.isArray(row.image_paths) ? row.image_paths.map(String) : [],
+      createdAt: String(row.created_at),
+    })),
   };
 }

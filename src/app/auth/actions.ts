@@ -10,6 +10,7 @@ import {
   oauthCookieNames,
   signInSchema,
   signUpSchema,
+  updateCalendlyUrlSchema,
   updateDisplayNameSchema,
   updatePasswordSchema,
   type AuthActionState,
@@ -181,6 +182,28 @@ export async function updateDisplayName(_state: AuthActionState, formData: FormD
   }
   revalidatePath("/account");
   return { status: "success", message: "Your name has been updated." };
+}
+
+export async function updateCalendlyUrl(_state: AuthActionState, formData: FormData): Promise<AuthActionState> {
+  const result = updateCalendlyUrlSchema.safeParse({ calendlyUrl: formData.get("calendlyUrl") });
+  if (!result.success) return { status: "error", fieldErrors: fieldErrors(result.error) };
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return genericAuthError();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return genericAuthError();
+  const { error } = await supabase
+    .from("tailor_profiles")
+    .update({ calendly_url: result.data.calendlyUrl || null })
+    .eq("user_id", user.id);
+  if (error) {
+    Sentry.captureException(error, { tags: { area: "auth_update_calendly_url" }, extra: { userId: user.id } });
+    return genericAuthError();
+  }
+  revalidatePath("/account");
+  return {
+    status: "success",
+    message: result.data.calendlyUrl ? "Your Calendly link has been saved." : "Your Calendly link has been removed.",
+  };
 }
 
 export async function resetAuthenticatorFactor(formData: FormData): Promise<void> {

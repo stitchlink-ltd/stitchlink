@@ -1,18 +1,46 @@
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowRight,
-  Banknote,
-  CheckCircle2,
-  Clock3,
-  Scale,
-  ShieldCheck,
-  UserCheck,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, Banknote, CheckCircle2, Clock3, Scale, ShieldCheck, UserCheck } from "lucide-react";
 import { DashboardHeading, Panel, StatCard, StatusPill } from "@/components/dashboard-ui";
 import { Price } from "@/components/price";
+import { formatMoney } from "@/lib/money";
+import { requireRole } from "@/data/auth";
+import { getAdminOverview } from "@/data/admin";
 
-export default function AdminDashboard() {
+const actionIcon = { dispute: AlertTriangle, verification: UserCheck, payout: Banknote, order: Clock3 } as const;
+
+function timeAgoLabel(iso: string) {
+  const hours = Math.round((Date.now() - new Date(iso).getTime()) / 3_600_000);
+  if (hours < 1) return "just now";
+  if (hours < 48) return `${hours} hr ago`;
+  return `${Math.round(hours / 24)} d ago`;
+}
+
+export default async function AdminDashboard() {
+  const account = await requireRole("admin");
+  const isDemo = "demo" in account;
+  const overview = isDemo
+    ? {
+        grossVolumeThisMonthKobo: 0,
+        grossVolumeChangePct: null,
+        activeOrderCount: 0,
+        dueThisWeekCount: 0,
+        overdueOrderCount: 0,
+        tailorsOnlineCount: 0,
+        tailorsAwaitingReviewCount: 0,
+        openDisputeCount: 0,
+        disputesDueTodayCount: 0,
+        protectedFundsKobo: 0,
+        eligiblePayoutKobo: 0,
+        frozenByDisputesKobo: 0,
+        actionQueue: [],
+        lastWebhookAt: null,
+        fxCache: { available: false, fetchedAt: new Date().toISOString(), source: "unconfigured" },
+        lastPayoutAt: null,
+      }
+    : await getAdminOverview();
+
+  const monthLabel = new Date().toLocaleDateString("en-US", { month: "long" });
+
   return (
     <div className="mx-auto max-w-7xl">
       <DashboardHeading
@@ -21,14 +49,19 @@ export default function AdminDashboard() {
         description="Live risk, verification, order and payout signals."
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Gross volume · July" value="₦18.6m" detail="+14.2% vs June" />
-        <StatCard label="Active orders" value="146" detail="12 due this week" />
-        <StatCard label="Tailors online" value="118" detail="6 awaiting review" />
+        <StatCard
+          label={`Gross volume · ${monthLabel}`}
+          value={formatMoney(overview.grossVolumeThisMonthKobo, "NGN")}
+          detail={overview.grossVolumeChangePct === null ? "No prior month to compare" : `${overview.grossVolumeChangePct > 0 ? "+" : ""}${overview.grossVolumeChangePct}% vs last month`}
+          trend={overview.grossVolumeChangePct === null || overview.grossVolumeChangePct >= 0 ? "up" : "down"}
+        />
+        <StatCard label="Active orders" value={String(overview.activeOrderCount)} detail={`${overview.dueThisWeekCount} due this week`} trend="neutral" />
+        <StatCard label="Tailors published" value={String(overview.tailorsOnlineCount)} detail={`${overview.tailorsAwaitingReviewCount} awaiting review`} trend="neutral" />
         <StatCard
           label="Open disputes"
-          value="4"
-          detail="2 response deadlines today"
-          trend="down"
+          value={String(overview.openDisputeCount)}
+          detail={`${overview.disputesDueTodayCount} response deadlines today`}
+          trend={overview.openDisputeCount > 0 ? "down" : "neutral"}
         />
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
@@ -38,52 +71,28 @@ export default function AdminDashboard() {
               <h2 className="font-display text-2xl font-semibold">Action queue</h2>
               <p className="text-xs text-muted">Highest-risk items first</p>
             </div>
-            <span className="rounded-full bg-red-800 px-2.5 py-1 text-[10px] font-bold text-white">
-              12 OPEN
-            </span>
+            <span className="rounded-full bg-red-800 px-2.5 py-1 text-[10px] font-bold text-white">{overview.actionQueue.length} OPEN</span>
           </div>
           <div className="divide-y divide-line">
-            {[
-              [
-                AlertTriangle,
-                "Dispute response due",
-                "STL-2314 · Customer evidence received",
-                "27 min",
-                "wine",
-              ],
-              [
-                UserCheck,
-                "Tailor verification",
-                "Moyo Stitches · 4 documents ready",
-                "2 hr",
-                "gold",
-              ],
-              [Banknote, "Payout review", "Batch PAY-0722 · ₦2.14m", "Today", "green"],
-              [Clock3, "Late production update", "STL-2298 · 48 hours overdue", "Today", "gray"],
-            ].map(([Icon, title, body, time, tone]) => {
-              const RowIcon = Icon as typeof AlertTriangle;
+            {overview.actionQueue.map((item, index) => {
+              const Icon = actionIcon[item.kind];
               return (
-                <Link
-                  href="/admin/disputes"
-                  key={title as string}
-                  className="flex items-center gap-4 p-5 hover:bg-background"
-                >
+                <Link href={item.href} key={`${item.kind}-${index}`} className="flex items-center gap-4 p-5 hover:bg-background">
                   <span className="grid size-10 place-items-center rounded-full bg-background text-wine">
-                    <RowIcon size={18} />
+                    <Icon size={18} />
                   </span>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold">{title as string}</p>
-                      <StatusPill tone={tone as "wine" | "gold" | "green" | "gray"}>
-                        {time as string}
-                      </StatusPill>
+                      <p className="text-sm font-semibold">{item.title}</p>
+                      <StatusPill tone={item.tone}>{item.timeLabel}</StatusPill>
                     </div>
-                    <p className="mt-1 text-xs text-muted">{body as string}</p>
+                    <p className="mt-1 text-xs text-muted">{item.body}</p>
                   </div>
                   <ArrowRight size={15} />
                 </Link>
               );
             })}
+            {overview.actionQueue.length === 0 && <p className="p-8 text-center text-sm text-muted">Nothing needs attention right now.</p>}
           </div>
         </Panel>
         <div className="space-y-4">
@@ -92,36 +101,43 @@ export default function AdminDashboard() {
               <p className="font-semibold">Protected funds</p>
               <ShieldCheck className="text-sage" size={19} />
             </div>
-            <Price kobo={2468000000} className="mt-4 block font-display text-4xl font-semibold" />
-            <p className="mt-1 text-xs text-muted">Across 146 active orders</p>
+            <Price kobo={overview.protectedFundsKobo} className="mt-4 block font-display text-4xl font-semibold" />
+            <p className="mt-1 text-xs text-muted">Across {overview.activeOrderCount} active orders</p>
             <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
               <div className="rounded-xl bg-background p-3">
                 <p className="text-muted">Eligible</p>
-                <p className="mt-1 font-semibold">₦2.14m</p>
+                <p className="mt-1 font-semibold">{formatMoney(overview.eligiblePayoutKobo, "NGN")}</p>
               </div>
               <div className="rounded-xl bg-background p-3">
                 <p className="text-muted">Frozen</p>
-                <p className="mt-1 font-semibold text-wine">₦384k</p>
+                <p className="mt-1 font-semibold text-wine">{formatMoney(overview.frozenByDisputesKobo, "NGN")}</p>
               </div>
             </div>
           </Panel>
           <Panel className="p-5">
             <p className="font-semibold">Platform health</p>
             <div className="mt-4 space-y-3 text-xs">
-              {[
-                ["Paystack webhooks", "Healthy"],
-                ["FX rate cache", "12 min old"],
-                ["Realtime messages", "Healthy"],
-                ["Last reconciliation", "06:15 WAT"],
-              ].map(([label, value]) => (
-                <div key={label} className="flex justify-between">
-                  <span className="text-muted">{label}</span>
-                  <span className="flex items-center gap-1 font-semibold">
-                    <CheckCircle2 size={12} className="text-sage" />
-                    {value}
-                  </span>
-                </div>
-              ))}
+              <div className="flex justify-between">
+                <span className="text-muted">Paystack webhooks</span>
+                <span className="flex items-center gap-1 font-semibold">
+                  <CheckCircle2 size={12} className={overview.lastWebhookAt ? "text-sage" : "text-muted"} />
+                  {overview.lastWebhookAt ? `Last ${timeAgoLabel(overview.lastWebhookAt)}` : "None received yet"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">FX rate cache</span>
+                <span className="flex items-center gap-1 font-semibold">
+                  <CheckCircle2 size={12} className={overview.fxCache.available ? "text-sage" : "text-muted"} />
+                  {overview.fxCache.available ? `${timeAgoLabel(overview.fxCache.fetchedAt)} old` : "Unconfigured"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">Last payout recorded</span>
+                <span className="flex items-center gap-1 font-semibold">
+                  <CheckCircle2 size={12} className={overview.lastPayoutAt ? "text-sage" : "text-muted"} />
+                  {overview.lastPayoutAt ? timeAgoLabel(overview.lastPayoutAt) : "None yet"}
+                </span>
+              </div>
             </div>
           </Panel>
         </div>
@@ -130,22 +146,22 @@ export default function AdminDashboard() {
         <Link href="/admin/verification">
           <Panel className="p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
             <UserCheck className="text-wine" />
-            <h2 className="mt-4 font-display text-xl font-semibold">6 tailor applications</h2>
-            <p className="mt-1 text-xs text-muted">Oldest waiting 31 hours</p>
+            <h2 className="mt-4 font-display text-xl font-semibold">{overview.tailorsAwaitingReviewCount} tailor applications</h2>
+            <p className="mt-1 text-xs text-muted">Review the queue</p>
           </Panel>
         </Link>
         <Link href="/admin/disputes">
           <Panel className="p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
             <Scale className="text-wine" />
-            <h2 className="mt-4 font-display text-xl font-semibold">4 protected disputes</h2>
-            <p className="mt-1 text-xs text-muted">₦384,000 currently frozen</p>
+            <h2 className="mt-4 font-display text-xl font-semibold">{overview.openDisputeCount} protected disputes</h2>
+            <p className="mt-1 text-xs text-muted">{formatMoney(overview.frozenByDisputesKobo, "NGN")} currently frozen</p>
           </Panel>
         </Link>
         <Link href="/admin/payments">
           <Panel className="p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
             <Banknote className="text-wine" />
-            <h2 className="mt-4 font-display text-xl font-semibold">Next payout batch</h2>
-            <p className="mt-1 text-xs text-muted">Review scheduled for 3:00 PM</p>
+            <h2 className="mt-4 font-display text-xl font-semibold">Payments & payouts</h2>
+            <p className="mt-1 text-xs text-muted">{formatMoney(overview.eligiblePayoutKobo, "NGN")} eligible now</p>
           </Panel>
         </Link>
       </div>

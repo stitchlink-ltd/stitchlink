@@ -13,11 +13,11 @@ export function UpdateDisplayNameForm({ defaultValue }: { defaultValue: string }
         required
         minLength={2}
         maxLength={100}
-        className="min-h-10 flex-1 rounded-lg border border-line bg-paper px-3 text-sm outline-none focus:border-wine"
+        className="min-h-10 flex-1 rounded-tl-lg rounded-bl-lg  border border-line bg-paper px-3 text-sm outline-none focus:border-wine"
       />
       <button
         disabled={pending}
-        className="min-h-10 shrink-0 rounded-full border border-line px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+        className="min-h-10 shrink-0 rounded-tr-lg rounded-br-lg border border-line px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? "Saving…" : "Save name"}
       </button>
@@ -25,7 +25,9 @@ export function UpdateDisplayNameForm({ defaultValue }: { defaultValue: string }
         <p className="text-xs text-wine sm:basis-full">{state.fieldErrors.displayName[0]}</p>
       )}
       {state.message && (
-        <p className={`text-xs sm:basis-full ${state.status === "error" ? "text-wine" : "text-sage"}`}>
+        <p
+          className={`text-xs sm:basis-full ${state.status === "error" ? "text-wine" : "text-sage"}`}
+        >
           {state.message}
         </p>
       )}

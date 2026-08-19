@@ -184,6 +184,34 @@ export async function openDispute(_state: MarketplaceActionState, formData: Form
   } catch(error){return errorState(error);}
 }
 
+const resolveDisputeSchema = z.object({
+  disputeId: z.uuid(),
+  status: z.enum(["resolved_refund", "resolved_partial", "resolved_no_refund", "closed"]),
+  notes: z.string().trim().min(3).max(2000),
+  refundNgn: z.coerce.number().finite().min(0).max(100000000),
+});
+
+export async function resolveDispute(disputeId: string, status: string, notes: string, refundNgn: number): Promise<MarketplaceActionState> {
+  const parsed = resolveDisputeSchema.safeParse({ disputeId, status, notes, refundNgn });
+  if (!parsed.success) return { status: "error", message: parsed.error.issues[0]?.message ?? "Invalid dispute resolution." };
+  try {
+    const account = await requireRole("admin"); if ("demo" in account) return { status: "success" };
+    const supabase = await currentSupabase();
+    const { error } = await supabase.rpc("admin_resolve_dispute", {
+      p_dispute_id: parsed.data.disputeId,
+      p_status: parsed.data.status,
+      p_notes: parsed.data.notes,
+      p_refund_kobo: ngnToKobo(parsed.data.refundNgn),
+    });
+    if (error) throw new Error(error.message);
+    const { data: dispute } = await supabase.from("disputes").select("opened_by").eq("id", parsed.data.disputeId).single();
+    if (dispute) dispatchNotification({ userId: dispute.opened_by, title: "Your dispute has a decision", body: parsed.data.notes, href: "/customer/orders" });
+    revalidatePath("/admin/disputes");
+    revalidatePath("/admin/payments");
+    return { status: "success", message: "Dispute resolved." };
+  } catch (error) { return errorState(error); }
+}
+
 export async function createBalanceLink(orderId: string): Promise<MarketplaceActionState> {
   try {
     const account=await requireRole("admin"); if("demo" in account)return{status:"success"};

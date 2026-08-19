@@ -51,8 +51,18 @@ export const updateDisplayNameSchema = z.object({
   displayName: z.string().trim().min(2, "Enter your name.").max(100, "Name is too long."),
 });
 
+export const updateCalendlyUrlSchema = z.object({
+  calendlyUrl: z
+    .string()
+    .trim()
+    .max(300, "Link is too long.")
+    .refine((value) => value === "" || value.startsWith("https://calendly.com/"), {
+      message: "Enter a valid Calendly link (https://calendly.com/…) or leave it blank.",
+    }),
+});
+
 export type AuthFieldErrors = Partial<
-  Record<"fullName" | "email" | "role" | "password" | "confirmPassword" | "terms" | "captchaToken" | "studioName" | "bio" | "city" | "state" | "specialties" | "displayName", string[]>
+  Record<"fullName" | "email" | "role" | "password" | "confirmPassword" | "terms" | "captchaToken" | "studioName" | "bio" | "city" | "state" | "specialties" | "displayName" | "calendlyUrl", string[]>
 >;
 
 export type AuthActionState = {
